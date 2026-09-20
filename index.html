@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0d0c">
+<title>Perfume Prices</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<!-- SheetJS reads .xlsx / .xls files in the browser (CSV and text work without it) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0e0d0c; --surface:#171513; --surface2:#211e1a; --line:#2d2924;
+  --text:#f4efe6; --muted:#9b9286; --gold:#cfae6a; --gold-soft:rgba(207,174,106,.14);
+  --gold-ink:#17130b; --up:#ef6b5b; --down:#5fcf9a; --new:#86b4ff;
+  --up-soft:rgba(239,107,91,.13); --down-soft:rgba(95,207,154,.13); --new-soft:rgba(134,180,255,.14);
+  --shadow:0 22px 44px -22px rgba(0,0,0,.75);
+  --serif:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f6f2ea; --surface:#fffdf8; --surface2:#efe9dd; --line:#e2dacb;
+    --text:#1b1814; --muted:#7a7162; --gold:#93733a; --gold-soft:rgba(147,115,58,.12);
+    --gold-ink:#fffaf0; --up:#c9402f; --down:#178a59; --new:#2f6fd6;
+    --up-soft:rgba(201,64,47,.10); --down-soft:rgba(23,138,89,.11); --new-soft:rgba(47,111,214,.10);
+    --shadow:0 22px 44px -26px rgba(70,50,10,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px calc(env(safe-area-inset-bottom,0px) + 100px)}
+body.noscroll{overflow:hidden}
+.app{max-width:720px;margin:0 auto}
+button,input,select{font-family:inherit;font-size:16px;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.tab{display:none}.tab.on{display:block}
+
+/* masthead */
+.mast{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 2px 14px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--serif);font-size:1.85rem;font-weight:600;letter-spacing:.005em;line-height:1}
+.brand i{color:var(--gold);font-weight:600}
+.tag{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.page-title{font-family:var(--serif);font-size:2rem;font-weight:600;margin:18px 2px 14px}
+
+/* hero */
+.hero{margin:16px 0 14px;padding:20px 20px 18px;border-radius:22px;border:1px solid var(--line);
+  background:linear-gradient(135deg,var(--gold-soft),transparent 65%),var(--surface);box-shadow:var(--shadow)}
+.eyebrow{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:800}
+.month{font-family:var(--serif);font-size:2.5rem;font-weight:600;line-height:1.05;margin:6px 0 8px;letter-spacing:-.005em}
+.meta{color:var(--muted);font-size:.86rem;font-weight:600;line-height:1.5}
+.meta b{color:var(--text)}
+
+/* chips */
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 12px;padding:2px 16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:.85rem;white-space:nowrap}
+.chip b{color:var(--text);font-weight:800}
+.chip.on{background:var(--gold);border-color:transparent;color:var(--gold-ink)}
+.chip.on b{color:var(--gold-ink)}
+.chip.up.on{background:var(--up)}.chip.down.on{background:var(--down)}.chip.new.on{background:var(--new)}
+.chip.up:not(.on) i{color:var(--up)}.chip.down:not(.on) i{color:var(--down)}.chip.new:not(.on) i{color:var(--new)}
+.chip i{font-style:normal}
+.months{margin-top:2px}
+.months .chip{font-family:var(--serif);font-size:1rem;font-weight:700;padding:7px 15px}
+
+/* search */
+.searchbar{position:sticky;top:0;z-index:10;padding:10px 0 12px;margin:0 -16px;padding-left:16px;padding-right:16px;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.search{position:relative}
+.search svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:19px;height:19px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round}
+.search input{width:100%;padding:15px 44px 15px 46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--text);box-shadow:var(--shadow)}
+.search input::placeholder{color:var(--muted)}
+.search input:focus{border-color:var(--gold);outline:none}
+.search button{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;color:var(--muted);font-size:1.2rem;display:none}
+.search.has button{display:block}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 10px}
+.count{font-size:.8rem;font-weight:700;color:var(--muted)}
+.sortsel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.85rem;font-weight:700;color:var(--text)}
+
+/* rows */
+.list{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row:active{background:var(--surface2)}
+.r-main{min-width:0;flex:1}
+.r-name{font-weight:700;font-size:.98rem;line-height:1.3;overflow-wrap:anywhere}
+.r-sub{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:5px;font-size:.78rem;font-weight:700}
+.r-side{flex:none;text-align:right}
+.r-price{font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
+.r-price small{font-size:.68rem;color:var(--muted);font-weight:700;margin-left:3px}
+.r-price.dim{color:var(--muted)}
+.spark{display:block;margin:5px 0 0 auto;width:60px;height:18px}
+.tr{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px}
+.tr.up{color:var(--up);background:var(--up-soft)}.tr.down{color:var(--down);background:var(--down-soft)}
+.tr.same{color:var(--muted);background:var(--surface2)}.tr.new{color:var(--new);background:var(--new-soft)}
+.tr.rem{color:var(--muted);background:var(--surface2)}
+.tr i{font-style:normal;font-weight:600;opacity:.85}
+.was{color:var(--muted);font-weight:600}
+mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-weight:800}
+.more{margin-top:12px}
+.empty{padding:38px 22px;text-align:center;color:var(--muted);font-weight:600;line-height:1.55}
+.empty h3{font-family:var(--serif);font-size:1.6rem;font-weight:600;color:var(--text);margin-bottom:8px}
+
+/* generic */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;margin-top:12px}
+.card h3{font-family:var(--serif);font-size:1.35rem;font-weight:600;margin-bottom:4px}
+.card p{color:var(--muted);font-size:.88rem;font-weight:600;line-height:1.5}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border-radius:15px;font-weight:800;background:var(--gold);color:var(--gold-ink);margin-top:14px}
+.btn:active{filter:brightness(.92)}
+.btn.sec{background:var(--surface2);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:var(--up-soft);color:var(--up)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn+.btn{margin-top:10px}
+.btn.sm{padding:11px 14px;margin-top:0;font-size:.88rem;width:auto;flex:1}
+.field{display:block;width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:13px;padding:13px 14px;color:var(--text)}
+.field:focus{border-color:var(--gold);outline:none}
+.lbl{display:block;font-size:.76rem;font-weight:800;color:var(--muted);margin:14px 2px 7px;letter-spacing:.04em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:10px;margin:14px 2px 2px;font-weight:700;font-size:.9rem}
+.chk input{width:20px;height:20px;accent-color:var(--gold)}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;margin:24px 2px 10px}
+.sec-head h2{font-family:var(--serif);font-size:1.4rem;font-weight:600}
+.sec-head span{font-size:.78rem;color:var(--muted);font-weight:600}
+.lrow{display:flex;flex-direction:column;gap:10px}
+.lrow .t{font-family:var(--serif);font-size:1.4rem;font-weight:600}
+.lrow .m{font-size:.8rem;color:var(--muted);font-weight:600;line-height:1.5}
+.lrow .btns{display:flex;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.tile{background:var(--surface2);border-radius:14px;padding:11px 12px}
+.tile .k{font-size:.7rem;color:var(--muted);font-weight:700}
+.tile .v{font-size:1.05rem;font-weight:800;margin-top:2px}
+.tile .s{font-size:.7rem;color:var(--muted);font-weight:600}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:0 12px calc(env(safe-area-inset-bottom,0px) + 10px);pointer-events:none}
+.nav-in{pointer-events:auto;display:flex;gap:4px;width:100%;max-width:360px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:22px;padding:6px;box-shadow:var(--shadow)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:16px;color:var(--muted);font-size:.72rem;font-weight:800}
+.nav button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav button.on{color:var(--gold);background:var(--gold-soft)}
+
+/* sheet */
+#sheetRoot{position:fixed;inset:0;z-index:50;display:none}
+#sheetRoot.open{display:block}
+.backdrop{position:absolute;inset:0;background:rgba(6,5,4,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.sheet{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:26px 26px 0 0;padding:10px 20px calc(env(safe-area-inset-bottom,0px) + 24px);animation:up .22s ease-out}
+@keyframes up{from{transform:translate(-50%,40px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:0 auto 16px}
+.sheet h2{font-family:var(--serif);font-size:1.7rem;font-weight:600;line-height:1.15;margin-bottom:6px}
+.pbig{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin:6px 0 4px}
+.pbig small{font-size:.9rem;color:var(--muted);font-weight:700}
+.note{background:var(--surface2);border-radius:14px;padding:12px 14px;font-size:.86rem;font-weight:600;color:var(--muted);line-height:1.5;margin-top:12px}
+.note b{color:var(--text)}
+.note.warn{background:var(--up-soft);color:var(--up)}
+.htab{width:100%;border-collapse:collapse;margin-top:6px;font-size:.9rem}
+.htab td{padding:10px 2px;border-top:1px solid var(--line);font-weight:700}
+.htab td:nth-child(2){text-align:right}.htab td:nth-child(3){text-align:right;font-size:.8rem}
+.chart{width:100%;height:auto;display:block;margin-top:10px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translateX(-50%) translateY(10px);background:var(--text);color:var(--bg);padding:11px 20px;border-radius:999px;font-weight:800;font-size:.86rem;opacity:0;pointer-events:none;transition:.2s;z-index:80;max-width:88vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}#toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="mast"><div class="brand">Perfume <i>Prices</i></div><div class="tag">Monthly tracker</div></header>
+
+  <main class="tab on" id="tab-prices">
+    <div id="pHead"></div>
+    <div class="searchbar" id="searchBar">
+      <div class="search" id="searchBox">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search perfume or brand" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="qClear" aria-label="Clear search">✕</button>
+      </div>
+    </div>
+    <div id="pTool"></div>
+    <div id="pList"></div>
+  </main>
+
+  <main class="tab" id="tab-lists"></main>
+</div>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-in">
+    <button data-a="tab" data-v="prices" class="on"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M5 19h14"/></svg>Prices</button>
+    <button data-a="tab" data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Lists</button>
+  </div>
+</nav>
+
+<div id="sheetRoot"></div>
+<div id="toast"></div>
+<input type="file" id="listFile" hidden accept=".xlsx,.xls,.xlsm,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+<input type="file" id="backupFile" hidden accept=".json,application/json">
+
+<script>
+"use strict";
+/* ============ helpers ============ */
+const KEY = 'perfumePricesV1';
+const $ = id => document.getElementById(id);
+const collator = new Intl.Collator('en', { sensitivity:'base', numeric:true });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const round2 = n => Math.round(n*100)/100;
+function newId(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+function norm(s){
+  return String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/[^a-z0-9\u0400-\u04ff]+/g,' ').trim();
+}
+function monthLabel(m, short){
+  const p = m.split('-').map(Number);
+  return new Date(Date.UTC(p[0],p[1]-1,1)).toLocaleDateString('en-US',{month:short?'short':'long',year:'numeric',timeZone:'UTC'});
+}
+function curMonth(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function guessMonth(name){
+  let m = String(name).match(/(20\d{2})[-_. ]?(0[1-9]|1[0-2])(?!\d)/);
+  if(m) return m[1]+'-'+m[2];
+  m = String(name).match(/(0[1-9]|1[0-2])[-_. ](20\d{2})/);
+  if(m) return m[2]+'-'+m[1];
+  const names = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  m = String(name).toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[-_. ]*(20\d{2})/);
+  if(m) return m[2]+'-'+String(names.indexOf(m[1])+1).padStart(2,'0');
+  return curMonth();
+}
+function parsePrice(v){
+  if(typeof v==='number') return Number.isFinite(v) ? v : null;
+  if(v==null) return null;
+  const raw = String(v).trim();
+  if(!/^(?:€|\$|£|eur|rsd|din|usd|kn|chf|km)?\s*-?\d[\d\s\u00a0.,]*\s*(?:€|\$|£|eur|rsd|din|usd|kn|chf|km|\.-)?$/i.test(raw)) return null;
+  const s = raw.replace(/[^\d.,\-]/g,''); if(!/\d/.test(s)) return null;
+  const hasC = s.includes(','), hasD = s.includes('.'); let t = s;
+  if(hasC && hasD) t = s.lastIndexOf(',')>s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
+  else if(hasC) t = /^-?\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g,'') : s.replace(',','.');
+  else if(hasD) t = /^-?\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g,'') : s;
+  const n = Number(t); return Number.isFinite(n) ? n : null;
+}
+function fmtPrice(p, dec){ return Number(p).toLocaleString('en-US',{minimumFractionDigits:dec?2:0,maximumFractionDigits:dec?2:0}); }
+function csvParse(text){
+  text = text.replace(/^\uFEFF/,'');
+  const first = text.split(/\r?\n/).find(l=>l.trim()) || '';
+  const cnt = c => first.split(c).length-1;
+  const delim = cnt('\t')>=Math.max(cnt(';'),cnt(',')) && cnt('\t')>0 ? '\t' : cnt(';')>cnt(',') ? ';' : ',';
+  const rows = []; let row = [], cur = '', q = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+    else if(c==='"') q = true;
+    else if(c===delim){ row.push(cur); cur = ''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r' && text[i+1]==='\n') i++; row.push(cur); cur = ''; rows.push(row); row = []; }
+    else cur += c;
+  }
+  if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+  return rows.map(r=>r.map(x=>typeof x==='string'?x.trim():x));
+}
+
+/* ============ data ============ */
+function normalizeData(r){
+  if(!r || !Array.isArray(r.lists)) return null;
+  const map = new Map();
+  r.lists.forEach(l => {
+    if(!l || !/^\d{4}-\d{2}$/.test(l.month) || !Array.isArray(l.items)) return;
+    const seen = new Map();
+    l.items.forEach(x => { if(Array.isArray(x) && typeof x[0]==='string' && Number.isFinite(Number(x[1]))){ const k = norm(x[0]); if(k) seen.set(k,[x[0].trim(),Number(x[1])]); } });
+    map.set(l.month,{ id:String(l.id||newId()), month:l.month, file:String(l.file||'').slice(0,120), at:String(l.at||''), items:[...seen.values()] });
+  });
+  return { currency: typeof r.currency==='string' ? r.currency.slice(0,8) : '', lists:[...map.values()].sort((a,b)=>a.month<b.month?-1:1) };
+}
+function loadData(){ try{ const d = normalizeData(JSON.parse(localStorage.getItem(KEY))); if(d) return d; }catch(e){} return { currency:'', lists:[] }; }
+let data = loadData();
+let hist = new Map(), names = new Map();
+function buildCache(){
+  hist = new Map(); names = new Map();
+  data.lists.forEach(l => {
+    l.k = l.items.map(x=>norm(x[0]));
+    l.dec = l.items.some(x=>x[1]%1!==0);
+    l.items.forEach((x,i) => { let m = hist.get(l.k[i]); if(!m){ m = new Map(); hist.set(l.k[i],m); } m.set(l.month,x[1]); names.set(l.k[i],x[0]); });
+  });
+}
+function persist(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify({ currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})) }));
+    return true;
+  }catch(e){ toast("Couldn't save. Export a backup now."); return false; }
+}
+buildCache();
+
+const ui = { tab:'prices', month:null, filter:'all', sort:'name', q:'', limit:50 };
+let view = null, results = [];
+
+function compareKeyed(prevPairs, curPairs){
+  const pm = new Map(prevPairs), seen = new Set(), c = { up:0, down:0, same:0, new:0, removed:0, avg:null }; let sum = 0, n = 0;
+  curPairs.forEach(([k,p]) => {
+    seen.add(k); const o = pm.get(k);
+    if(o==null){ c.new++; return; }
+    const ch = round2(p-o); if(ch>0) c.up++; else if(ch<0) c.down++; else c.same++;
+    if(o>0){ sum += ch/o*100; n++; }
+  });
+  pm.forEach((_,k) => { if(!seen.has(k)) c.removed++; });
+  if(n) c.avg = sum/n;
+  return c;
+}
+const pairsOf = l => l.items.map((x,i)=>[l.k[i],x[1]]);
+
+function buildView(){
+  const L = data.lists; if(!L.length){ view = null; return; }
+  let k = L.findIndex(l=>l.month===ui.month); if(k<0){ k = L.length-1; ui.month = L[k].month; }
+  const cur = L[k], prev = k>0 ? L[k-1] : null;
+  const pm = new Map(); if(prev) prev.items.forEach((x,i)=>pm.set(prev.k[i],x[1]));
+  const rows = [], seen = new Set(), cnt = { up:0, down:0, same:0, new:0, removed:0 }; let sum = 0, n = 0;
+  cur.items.forEach((x,i) => {
+    const key = cur.k[i]; seen.add(key);
+    const r = { key, name:x[0], price:x[1], prev:null, ch:null, pct:null, st:'none' };
+    if(prev){
+      const p = pm.get(key);
+      if(p==null) r.st = 'new';
+      else { r.prev = p; r.ch = round2(x[1]-p); r.pct = p>0 ? r.ch/p*100 : 0; r.st = r.ch>0?'up':r.ch<0?'down':'same'; sum += r.pct; n++; }
+    }
+    if(cnt[r.st]!==undefined) cnt[r.st]++;
+    rows.push(r);
+  });
+  const removed = [];
+  if(prev) prev.items.forEach((x,i)=>{ if(!seen.has(prev.k[i])) removed.push({ key:prev.k[i], name:x[0], price:null, prev:x[1], ch:null, pct:null, st:'removed' }); });
+  cnt.removed = removed.length;
+  view = { k, cur, prev, rows, removed, cnt, avg:n?sum/n:null, dec:cur.dec||(prev?prev.dec:false) };
+}
+function computeResults(){
+  if(!view){ results = []; return; }
+  let base = ui.filter==='removed' ? view.removed : view.rows;
+  if(['up','down','same','new'].includes(ui.filter)) base = base.filter(r=>r.st===ui.filter);
+  const toks = norm(ui.q).split(' ').filter(Boolean);
+  if(toks.length) base = base.filter(r=>toks.every(t=>r.key.includes(t)));
+  const arr = base.slice(), pr = r => r.price==null ? r.prev : r.price;
+  if(ui.sort==='name') arr.sort((a,b)=>collator.compare(a.name,b.name));
+  else if(ui.sort==='low') arr.sort((a,b)=>pr(a)-pr(b)||collator.compare(a.name,b.name));
+  else if(ui.sort==='high') arr.sort((a,b)=>pr(b)-pr(a)||collator.compare(a.name,b.name));
+  else if(ui.sort==='rise'){ const v = r=>r.pct==null?-1e9:r.pct; arr.sort((a,b)=>v(b)-v(a)); }
+  else if(ui.sort==='drop'){ const v = r=>r.pct==null?1e9:r.pct; arr.sort((a,b)=>v(a)-v(b)); }
+  results = arr;
+}
+
+/* ============ ui plumbing ============ */
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'),2400); }
+function openSheet(html, mount){
+  const root = $('sheetRoot');
+  root.innerHTML = '<div class="backdrop" data-a="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div>';
+  root.classList.add('open'); document.body.classList.add('noscroll');
+  if(mount) mount(root.querySelector('.sheet'));
+}
+function closeSheet(){ const r = $('sheetRoot'); r.classList.remove('open'); r.innerHTML=''; document.body.classList.remove('noscroll'); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeSheet(); });
+function confirmSheet(title, text, label, onYes){
+  openSheet('<h2>'+esc(title)+'</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 18px">'+esc(text)+'</p><button class="btn danger" id="cfYes" style="margin-top:0">'+esc(label)+'</button><button class="btn sec" data-a="closeSheet">Cancel</button>',
+    s => s.querySelector('#cfYes').addEventListener('click',()=>{ closeSheet(); onYes(); }));
+}
+function setTab(t){
+  ui.tab = t;
+  $('tab-prices').classList.toggle('on', t==='prices'); $('tab-lists').classList.toggle('on', t==='lists');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===t));
+  window.scrollTo(0,0);
+}
+const cur$ = () => data.currency ? ' <small>'+esc(data.currency)+'</small>' : '';
+const priceStr = (p,dec) => fmtPrice(p,dec)+cur$();
+const sgnPrice = (c,dec) => (c>0?'+':'−')+fmtPrice(Math.abs(c),dec);
+const sgnPct = p => (p>0?'+':p<0?'−':'')+Math.abs(p).toFixed(1)+'%';
+function hl(text){
+  const t = ui.q.trim(); if(!t) return esc(text);
+  const parts = t.split(/\s+/).filter(Boolean).map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const re = new RegExp('('+parts.join('|')+')','gi');
+  return text.split(re).map((seg,i)=>i%2?'<mark>'+esc(seg)+'</mark>':esc(seg)).join('');
+}
+
+/* ============ PRICES tab ============ */
+function trendHtml(r, dec){
+  if(r.st==='up') return '<span class="tr up">▲ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
+  if(r.st==='down') return '<span class="tr down">▼ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
+  if(r.st==='same') return '<span class="tr same">● unchanged</span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
+  if(r.st==='new') return '<span class="tr new">NEW</span>';
+  if(r.st==='removed') return '<span class="tr rem">Not in this list</span><span class="was">last price '+fmtPrice(r.prev,dec)+'</span>';
+  return '';
+}
+function sparkHtml(r){
+  if(r.st==='removed') return '';
+  const m = hist.get(r.key); if(!m || m.size<2) return '';
+  const pts = []; for(let j=0;j<=view.k;j++){ const l = data.lists[j]; if(m.has(l.month)) pts.push(m.get(l.month)); }
+  const last = pts.slice(-6); if(last.length<2) return '';
+  const min = Math.min(...last), max = Math.max(...last), rg = (max-min)||1;
+  const d = last.map((p,i)=>(i?'L':'M')+(i/(last.length-1)*60).toFixed(1)+' '+(16-(p-min)/rg*14).toFixed(1)).join('');
+  const up = last[last.length-1]-last[0], c = up>0?'var(--up)':up<0?'var(--down)':'var(--muted)';
+  return '<svg class="spark" viewBox="0 0 60 18" preserveAspectRatio="none"><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function renderHead(){
+  const head = $('pHead'), tool = $('pTool');
+  const has = !!view;
+  $('searchBar').style.display = has ? '' : 'none';
+  if(!has){ head.innerHTML = ''; tool.innerHTML = ''; return; }
+  const v = view, L = data.lists;
+  let h = '';
+  if(L.length>1){
+    h += '<div class="chips months">'+L.slice().reverse().map(l=>'<button class="chip '+(l.month===v.cur.month?'on':'')+'" data-a="month" data-v="'+l.month+'">'+monthLabel(l.month,true)+'</button>').join('')+'</div>';
+  }
+  h += '<section class="hero"><div class="eyebrow">Price list</div><h1 class="month">'+monthLabel(v.cur.month)+'</h1><div class="meta"><b>'+v.rows.length.toLocaleString('en-US')+'</b> perfumes'+
+    (v.prev ? ' · compared with <b>'+monthLabel(v.prev.month)+'</b>' : ' · import next month’s list to see price trends')+'</div>'+
+    (v.avg!=null ? '<div class="meta">Prices moved <b style="color:var(--'+(v.avg>0?'up':v.avg<0?'down':'muted')+')">'+sgnPct(v.avg)+'</b> on average</div>' : '')+'</section>';
+  if(v.prev){
+    const c = v.cnt, chip = (f,label,n,klass,icon) => (n>0||ui.filter===f||f==='all') ? '<button class="chip '+klass+' '+(ui.filter===f?'on':'')+'" data-a="filter" data-v="'+f+'">'+(icon?'<i>'+icon+'</i>':'')+label+' <b>'+n.toLocaleString('en-US')+'</b></button>' : '';
+    h += '<div class="chips">'+chip('all','All',v.rows.length,'','')+chip('up','Up',c.up,'up','▲')+chip('down','Down',c.down,'down','▼')+chip('same','Same',c.same,'','')+chip('new','New',c.new,'new','')+chip('removed','Removed',c.removed,'','')+'</div>';
+  }
+  head.innerHTML = h;
+}
+function renderTool(){
+  if(!view){ $('pTool').innerHTML = ''; return; }
+  const opt = (v,l) => '<option value="'+v+'"'+(ui.sort===v?' selected':'')+'>'+l+'</option>';
+  $('pTool').innerHTML = '<div class="toolbar"><div class="count" id="countTxt"></div><select class="sortsel" id="sortSel" aria-label="Sort">'+
+    opt('name','Name A–Z')+opt('low','Price: low to high')+opt('high','Price: high to low')+(view.prev?opt('rise','Biggest increase')+opt('drop','Biggest drop'):'')+'</select></div>';
+}
+function renderList(){
+  const box = $('pList');
+  if(!view){
+    box.innerHTML = '<div class="card empty" style="margin-top:22px"><h3>No price list yet</h3><p>Import your monthly Excel or CSV file with two columns: perfume and price. Import a new one each month and price trends appear here.</p><button class="btn" data-a="pickList">Import price list</button></div>';
+    return;
+  }
+  computeResults();
+  const ct = $('countTxt'); if(ct) ct.textContent = results.length.toLocaleString('en-US')+(results.length===1?' perfume':' perfumes');
+  if(!results.length){
+    box.innerHTML = '<div class="list"><div class="empty"><h3>Nothing found</h3>'+(ui.q?'No perfume matches “'+esc(ui.q)+'”.':'No perfumes in this filter.')+'</div></div>';
+    return;
+  }
+  const dec = view.dec, shown = results.slice(0,ui.limit);
+  let h = '<div class="list">';
+  shown.forEach((r,i) => {
+    const p = r.price!=null ? r.price : r.prev;
+    h += '<button class="row" data-a="open" data-i="'+i+'"><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div></div>'+
+      '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+sparkHtml(r)+'</div></button>';
+  });
+  h += '</div>';
+  if(results.length>shown.length) h += '<button class="btn sec more" data-a="more">Show '+Math.min(50,results.length-shown.length)+' more · '+(results.length-shown.length).toLocaleString('en-US')+' left</button>';
+  box.innerHTML = h;
+}
+
+/* ---- detail sheet ---- */
+function chartSvg(series, N){
+  const W = 320, H = 130, pl = 12, pr = 12, pt = 22, pb = 22;
+  const vals = series.map(s=>s.p), min = Math.min(...vals), max = Math.max(...vals), rg = (max-min)||1;
+  const X = j => N>1 ? pl+j/(N-1)*(W-pl-pr) : W/2, Y = p => pt+(1-(p-min)/rg)*(H-pt-pb);
+  const line = series.map((s,i)=>(i?'L':'M')+X(s.j).toFixed(1)+' '+Y(s.p).toFixed(1)).join('');
+  const dec = view ? view.dec : false;
+  let g = '<path d="'+line+'" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
+  series.forEach((s,i) => {
+    const last = i===series.length-1;
+    g += '<circle cx="'+X(s.j).toFixed(1)+'" cy="'+Y(s.p).toFixed(1)+'" r="'+(last?5:3.4)+'" fill="'+(last?'var(--gold)':'var(--surface)')+'" stroke="var(--gold)" stroke-width="2"/>';
+    if(last || i===0 || s.p===min || s.p===max) g += '<text x="'+X(s.j).toFixed(1)+'" y="'+(Y(s.p)-9).toFixed(1)+'" text-anchor="'+(i===0&&series.length>1?'start':last&&series.length>1?'end':'middle')+'" font-size="10.5" font-weight="700" fill="var(--muted)">'+fmtPrice(s.p,dec)+'</text>';
+  });
+  const first = data.lists[0].month, lastM = data.lists[N-1].month;
+  g += '<text x="'+pl+'" y="'+(H-4)+'" font-size="10" font-weight="700" fill="var(--muted)">'+monthLabel(first,true)+'</text>';
+  if(N>1) g += '<text x="'+(W-pr)+'" y="'+(H-4)+'" text-anchor="end" font-size="10" font-weight="700" fill="var(--muted)">'+monthLabel(lastM,true)+'</text>';
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'">'+g+'</svg>';
+}
+function openDetail(r){
+  const m = hist.get(r.key) || new Map(), L = data.lists, dec = view.dec;
+  const series = []; L.forEach((l,j)=>{ if(m.has(l.month)) series.push({ j, month:l.month, p:m.get(l.month) }); });
+  const prices = series.map(s=>s.p);
+  const lo = series.reduce((a,b)=>b.p<a.p?b:a), hi = series.reduce((a,b)=>b.p>a.p?b:a);
+  const avg = prices.reduce((a,b)=>a+b,0)/prices.length;
+  let rowsH = '';
+  for(let i=L.length-1;i>=0;i--){
+    const l = L[i], p = m.get(l.month);
+    let prevP = null; for(let j=i-1;j>=0;j--){ if(m.has(L[j].month)){ prevP = m.get(L[j].month); break; } }
+    let ch = '<span class="was">—</span>';
+    if(p!=null && prevP!=null){ const c = round2(p-prevP); ch = c===0 ? '<span class="was">unchanged</span>' : '<span style="color:var(--'+(c>0?'up':'down')+')">'+(c>0?'▲ ':'▼ ')+sgnPrice(c,dec)+' ('+sgnPct(c/prevP*100)+')</span>'; }
+    else if(p!=null && prevP==null && i>0) ch = '<span style="color:var(--new)">back / new</span>';
+    rowsH += '<tr><td>'+monthLabel(l.month)+'</td><td>'+(p!=null?priceStr(p,dec):'<span class="was">not listed</span>')+'</td><td>'+ch+'</td></tr>';
+  }
+  const name = names.get(r.key) || r.name;
+  const curP = r.price;
+  openSheet('<div class="eyebrow">'+monthLabel(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
+    (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">Not in the '+monthLabel(view.cur.month)+' list. Last known price: <b>'+fmtPrice(r.prev,dec)+'</b>.</div>')+
+    (series.length>=1 ? chartSvg(series, L.length) : '')+
+    '<div class="grid3"><div class="tile"><div class="k">Lowest</div><div class="v">'+fmtPrice(lo.p,dec)+'</div><div class="s">'+monthLabel(lo.month,true)+'</div></div>'+
+    '<div class="tile"><div class="k">Highest</div><div class="v">'+fmtPrice(hi.p,dec)+'</div><div class="s">'+monthLabel(hi.month,true)+'</div></div>'+
+    '<div class="tile"><div class="k">Average</div><div class="v">'+fmtPrice(avg,dec)+'</div><div class="s">'+series.length+(series.length===1?' month':' months')+'</div></div></div>'+
+    '<table class="htab">'+rowsH+'</table><button class="btn sec" data-a="closeSheet">Close</button>');
+}
+
+/* ============ LISTS tab ============ */
+function renderLists(){
+  const el = $('tab-lists'), L = data.lists;
+  let h = '<h1 class="page-title">Price lists</h1>';
+  h += '<div class="card" style="margin-top:0"><h3>Import a new list</h3><p>Excel (.xlsx, .xls) or CSV with two columns: perfume and price. Each month you import becomes its own list, and prices are compared with the month before.</p><button class="btn" data-a="pickList">Choose file</button></div>';
+  if(L.length){
+    h += '<div class="sec-head"><h2>Your lists</h2><span>Newest first</span></div>';
+    for(let i=L.length-1;i>=0;i--){
+      const l = L[i], prev = i>0 ? L[i-1] : null;
+      let cmp = '';
+      if(prev){ const c = compareKeyed(pairsOf(prev), pairsOf(l)); cmp = '<br>vs '+monthLabel(prev.month,true)+': ▲ '+c.up+' · ▼ '+c.down+' · new '+c.new+' · removed '+c.removed+(c.avg!=null?' · avg '+sgnPct(c.avg):''); }
+      const when = l.at ? new Date(l.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      h += '<div class="card lrow"><div class="t">'+monthLabel(l.month)+'</div><div class="m">'+l.items.length.toLocaleString('en-US')+' perfumes'+(l.file?' · '+esc(l.file):'')+(when?' · imported '+when:'')+cmp+'</div>'+
+        '<div class="btns"><button class="btn sec sm" data-a="viewList" data-v="'+l.month+'">View</button><button class="btn danger sm" data-a="delList" data-v="'+l.month+'">Delete</button></div></div>';
+    }
+  }
+  h += '<div class="card"><h3>Currency label</h3><p>Optional. Shown next to prices, for example RSD or €.</p><input class="field" id="curInput" maxlength="8" placeholder="e.g. RSD" value="'+esc(data.currency)+'" style="margin-top:12px"></div>';
+  h += '<div class="card"><h3>Backup</h3><p>Your lists are stored in this browser only. Export a backup now and then, or to move to another device.</p><button class="btn" data-a="export">Export backup</button><button class="btn sec" data-a="importBackup">Import backup</button></div>';
+  el.innerHTML = h;
+}
+function askDelete(month){
+  const L = data.lists, k = L.findIndex(l=>l.month===month); if(k<0) return;
+  const label = monthLabel(month), prev = k>0 ? L[k-1] : null, next = k<L.length-1 ? L[k+1] : null;
+  let text;
+  if(!next && prev) text = 'The '+label+' list will be removed. The app goes back to showing '+monthLabel(prev.month)+' with all its data and trends. Other months are not touched.';
+  else if(!next && !prev) text = 'This is your only list. Prices will be empty until you import a new one.';
+  else text = 'The '+label+' list will be removed. Other months are kept. '+monthLabel(next.month)+' will be compared with '+(prev?monthLabel(prev.month):'nothing (it becomes the first list)')+'.';
+  confirmSheet('Delete '+label+'?', text, 'Delete this list', () => {
+    data.lists = L.filter(l=>l.month!==month);
+    if(ui.month===month){ const pick = prev || next; ui.month = pick ? pick.month : null; }
+    buildCache(); persist(); render(); toast(label+' list deleted');
+  });
+}
+
+/* ============ IMPORT ============ */
+async function loadSource(file){
+  const buf = await file.arrayBuffer(), u = new Uint8Array(buf);
+  if((u[0]===0x50 && u[1]===0x4b) || (u[0]===0xD0 && u[1]===0xCF)){
+    if(typeof XLSX==='undefined') throw new Error('nolib');
+    const wb = XLSX.read(u,{ type:'array' });
+    return { names:wb.SheetNames, rows:n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{ header:1, defval:'', raw:true }) };
+  }
+  let enc = 'utf-8'; if(u[0]===0xFF && u[1]===0xFE) enc = 'utf-16le'; else if(u[0]===0xFE && u[1]===0xFF) enc = 'utf-16be';
+  const text = new TextDecoder(enc).decode(buf);
+  return { names:['Data'], rows:()=>csvParse(text) };
+}
+function colLetter(c){ let s = ''; c++; while(c>0){ s = String.fromCharCode(65+(c-1)%26)+s; c = Math.floor((c-1)/26); } return s; }
+function detectCols(rows){
+  const n = Math.min(30, Math.max(2, ...rows.slice(0,50).map(r=>r.length)));
+  const num = Array(n).fill(0), txt = Array(n).fill(0);
+  rows.slice(1,300).forEach(r => { for(let c=0;c<n;c++){ const v = r[c]; if(v===''||v==null) continue; if(parsePrice(v)!=null) num[c]++; else txt[c]++; } });
+  let price = 0, best = -1; for(let c=0;c<n;c++) if(num[c]>best){ best = num[c]; price = c; }
+  let name = -1, bt = -1; for(let c=0;c<n;c++) if(c!==price && txt[c]>bt){ bt = txt[c]; name = c; }
+  if(name<0) name = price===0 ? 1 : 0;
+  const h = rows[0] || [], kwN = /perfum|parfem|parfum|naziv|name|artik|proizvod|product|item|opis|descr/i, kwP = /price|cen|cijen|iznos|amount|eur|rsd|usd|€/i;
+  for(let c=0;c<n;c++) if(typeof h[c]==='string' && kwP.test(h[c]) && num[c]>0){ price = c; break; }
+  for(let c=0;c<n;c++) if(typeof h[c]==='string' && kwN.test(h[c]) && c!==price){ name = c; break; }
+  if(name===price) name = price===0 ? 1 : 0;
+  const hdr = rows.length>0 && String(h[price]??'').trim()!=='' && parsePrice(h[price])==null;
+  return { n, name, price, hdr };
+}
+function openImport(fileName, src){
+  let sheet = src.names[0], rows = [], hdr = true, nameCol = 0, priceCol = 1, ncols = 2, month = guessMonth(fileName), items = [];
+  const loadRows = () => {
+    rows = src.rows(sheet).filter(r=>r.some(x=>String(x??'').trim()!==''));
+    const d = detectCols(rows); hdr = d.hdr; nameCol = d.name; priceCol = d.price; ncols = d.n;
+  };
+  loadRows();
+  openSheet('<div class="eyebrow">New list</div><h2>Import price list</h2><div class="note" style="margin-top:10px" id="imFile"></div>'+
+    (src.names.length>1 ? '<label class="lbl" for="imSheet">SHEET</label><select class="field" id="imSheet">'+src.names.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>' : '')+
+    '<label class="lbl" for="imMonth">MONTH OF THIS LIST</label><input class="field" type="month" id="imMonth">'+
+    '<div class="two"><div><label class="lbl" for="imName">PERFUME COLUMN</label><select class="field" id="imName"></select></div><div><label class="lbl" for="imPrice">PRICE COLUMN</label><select class="field" id="imPrice"></select></div></div>'+
+    '<label class="chk"><input type="checkbox" id="imHdr"> First row is a header</label><div id="imPrev"></div>',
+  s => {
+    const q = x => s.querySelector(x);
+    q('#imFile').innerHTML = '<b>'+esc(fileName)+'</b>';
+    q('#imMonth').value = month;
+    function cols(){
+      const lab = c => (hdr && rows[0] && String(rows[0][c]??'').trim()!=='') ? String(rows[0][c]).slice(0,28) : 'Column '+colLetter(c);
+      const o = sel => Array.from({length:ncols},(_,c)=>'<option value="'+c+'"'+(c===sel?' selected':'')+'>'+esc(lab(c))+'</option>').join('');
+      q('#imName').innerHTML = o(nameCol); q('#imPrice').innerHTML = o(priceCol); q('#imHdr').checked = hdr;
+    }
+    function calc(){
+      const map = new Map(); let skipped = 0, dup = 0;
+      for(let i=hdr?1:0;i<rows.length;i++){
+        const r = rows[i], name = String(r[nameCol]??'').trim(), p = parsePrice(r[priceCol]), k = norm(name);
+        if(!name || !k || p==null || p<=0){ skipped++; continue; }
+        if(map.has(k)) dup++; map.set(k,[name,round2(p)]);
+      }
+      items = [...map.values()];
+    }
+    function preview(){
+      month = q('#imMonth').value || month; calc();
+      const box = q('#imPrev');
+      if(!items.length){ box.innerHTML = '<div class="note warn">No rows with a perfume name and a price were found. Check the two column choices above.</div><button class="btn" disabled>Import</button>'; return; }
+      const prevList = [...data.lists].filter(l=>l.month<month).pop();
+      const skippedTxt = (() => { let sk = 0; for(let i=hdr?1:0;i<rows.length;i++){ const r = rows[i]; const name = String(r[nameCol]??'').trim(), p = parsePrice(r[priceCol]); if(!name||p==null||p<=0) sk++; } return sk; })();
+      let t = '<b>'+items.length.toLocaleString('en-US')+'</b> perfumes found<br>Sample: '+items.slice(0,3).map(x=>esc(x[0])+' → '+fmtPrice(x[1],items.some(y=>y[1]%1!==0))).join('<br>');
+      if(skippedTxt) t += '<br>Skipped rows: '+skippedTxt+' (empty or no valid price)';
+      if(prevList){
+        const c = compareKeyed(pairsOf(prevList), items.map(x=>[norm(x[0]),x[1]]));
+        t += '<br><br>Compared with <b>'+monthLabel(prevList.month)+'</b>: ▲ '+c.up+' · ▼ '+c.down+' · same '+c.same+' · new '+c.new+' · removed '+c.removed+(c.avg!=null?'<br>Average change <b>'+sgnPct(c.avg)+'</b>':'');
+      } else t += '<br><br>This will be your first list, so there are no trends yet.';
+      const exists = data.lists.some(l=>l.month===month);
+      box.innerHTML = '<div class="note">'+t+'</div>'+(exists?'<div class="note warn">A list for '+monthLabel(month)+' already exists. Importing will replace it.</div>':'')+
+        '<button class="btn" id="imGo">'+(exists?'Replace ':'Import ')+monthLabel(month)+'</button>';
+    }
+    cols(); preview();
+    q('#imMonth').addEventListener('change', preview);
+    q('#imName').addEventListener('change', e=>{ nameCol = Number(e.target.value); preview(); });
+    q('#imPrice').addEventListener('change', e=>{ priceCol = Number(e.target.value); preview(); });
+    q('#imHdr').addEventListener('change', e=>{ hdr = e.target.checked; cols(); preview(); });
+    const sh = q('#imSheet'); if(sh) sh.addEventListener('change', e=>{ sheet = e.target.value; loadRows(); cols(); preview(); });
+    q('#imPrev').addEventListener('click', e => {
+      if(e.target.id!=='imGo') return;
+      if(!/^\d{4}-\d{2}$/.test(month)){ toast('Pick a month'); return; }
+      data.lists = data.lists.filter(l=>l.month!==month);
+      data.lists.push({ id:newId(), month, file:fileName.slice(0,120), at:new Date().toISOString(), items });
+      data.lists.sort((a,b)=>a.month<b.month?-1:1);
+      ui.month = month; ui.filter = 'all'; ui.limit = 50;
+      buildCache(); persist(); closeSheet(); setTab('prices'); render();
+      toast('Imported '+items.length.toLocaleString('en-US')+' perfumes for '+monthLabel(month,true));
+    });
+  });
+}
+$('listFile').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
+  try{ openImport(f.name, await loadSource(f)); }
+  catch(err){
+    toast(err.message==='nolib' ? 'Excel reader didn’t load. Check your connection or use CSV.' : 'Couldn’t read that file. Try .xlsx or CSV.');
+  }
+});
+
+/* ============ BACKUP ============ */
+function exportData(){
+  const blob = new Blob([JSON.stringify({ currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})) })],{ type:'application/json' });
+  const url = URL.createObjectURL(blob), a = document.createElement('a'), d = new Date();
+  a.href = url; a.download = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); toast('Backup exported');
+}
+$('backupFile').addEventListener('change', ev => {
+  const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d = null; try{ d = normalizeData(JSON.parse(r.result)); }catch(e){}
+    if(!d || !d.lists.length){ toast('That isn’t a valid backup file'); return; }
+    confirmSheet('Replace your lists?','The backup has '+d.lists.length+(d.lists.length===1?' list':' lists')+'. Your current '+data.lists.length+' will be replaced.','Replace with backup',()=>{
+      data = d; ui.month = null; buildCache(); persist(); render(); toast('Backup imported');
+    });
+  };
+  r.readAsText(f);
+});
+
+/* ============ events ============ */
+const actions = {
+  tab: el => setTab(el.dataset.v),
+  closeSheet: () => closeSheet(),
+  pickList: () => $('listFile').click(),
+  month: el => { ui.month = el.dataset.v; ui.filter = 'all'; ui.limit = 50; render(); },
+  filter: el => { ui.filter = el.dataset.v; ui.limit = 50; renderHead(); renderList(); },
+  more: () => { ui.limit += 50; renderList(); },
+  open: el => { const r = results[Number(el.dataset.i)]; if(r) openDetail(r); },
+  viewList: el => { ui.month = el.dataset.v; ui.filter = 'all'; ui.limit = 50; setTab('prices'); render(); },
+  delList: el => askDelete(el.dataset.v),
+  export: () => exportData(),
+  importBackup: () => $('backupFile').click()
+};
+document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if(el && actions[el.dataset.a]) actions[el.dataset.a](el); });
+document.addEventListener('change', e => {
+  if(e.target.id==='sortSel'){ ui.sort = e.target.value; ui.limit = 50; renderList(); }
+  if(e.target.id==='curInput'){ data.currency = e.target.value.trim().slice(0,8); persist(); renderHead(); renderList(); toast('Currency label saved'); }
+});
+let qT;
+$('q').addEventListener('input', e => {
+  $('searchBox').classList.toggle('has', !!e.target.value);
+  clearTimeout(qT); qT = setTimeout(()=>{ ui.q = e.target.value; ui.limit = 50; renderList(); }, 80);
+});
+$('qClear').addEventListener('click', () => { const q = $('q'); q.value = ''; $('searchBox').classList.remove('has'); ui.q = ''; ui.limit = 50; renderList(); q.focus(); });
+
+function render(){ buildView(); renderHead(); renderTool(); renderList(); renderLists(); }
+render();
+</script>
+</body>
+</html>
