@@ -202,7 +202,6 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 "use strict";
 /* ============ helpers ============ */
 const KEY = 'perfumePricesV1';
-const FRED_KEY = 'perfumeFredrikPricesV1';
 const $ = id => document.getElementById(id);
 const collator = new Intl.Collator('en', { sensitivity:'base', numeric:true });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -271,17 +270,7 @@ function normalizeData(r){
   return { currency: typeof r.currency==='string' ? r.currency.slice(0,8) : '', lists:[...map.values()].sort((a,b)=>a.month<b.month?-1:1) };
 }
 function loadData(){ try{ const d = normalizeData(JSON.parse(localStorage.getItem(KEY))); if(d) return d; }catch(e){} return { currency:'', lists:[] }; }
-function loadFredData(){ try{ const d = JSON.parse(localStorage.getItem(FRED_KEY)); if(d && typeof d==='object') return new Map(Object.entries(d)); }catch(e){} return new Map(); }
 let data = loadData();
-let fredPrices = loadFredData();
-function persistFred(){
-  try{
-    const obj = {}; fredPrices.forEach((v,k)=>{ obj[k]=v; });
-    localStorage.setItem(FRED_KEY, JSON.stringify(obj));
-    return true;
-  }catch(e){ return false; }
-}
-
 let hist = new Map(), names = new Map();
 function buildCache(){
   hist = new Map(); names = new Map();
@@ -445,20 +434,7 @@ function renderList(){
   let h = '<div class="list">';
   shown.forEach((r,i) => {
     const p = r.price!=null ? r.price : r.prev;
-    
-    // Fredrik & Louisa price badge for list items
-    const fredVal = fredPrices.get(r.key);
-    let fredBadge = '';
-    if(fredVal !== undefined && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0 && p != null) {
-      const fPrice = Number(fredVal);
-      const diffPct = round2(((fPrice - p) / fPrice) * 100);
-      const isCheaper = p < fPrice;
-      const badgeColor = isCheaper ? 'color:var(--down);background:var(--down-soft)' : 'color:var(--up);background:var(--up-soft)';
-      const desc = isCheaper ? 'cheaper' : 'expensive';
-      fredBadge = '<span class="tr" style="'+badgeColor+'">F&L ' + fmtPrice(fPrice, 2) + ' € (' + Math.abs(diffPct) + '% ' + desc + ')</span>';
-    }
-
-    h += '<button class="row" data-a="open" data-i="'+i+'"><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+fredBadge+'</div></div>'+
+    h += '<button class="row" data-a="open" data-i="'+i+'"><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div></div>'+
       '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+sparkHtml(r)+'</div></button>';
   });
   h += '</div>';
@@ -501,43 +477,13 @@ function openDetail(r){
   }
   const name = names.get(r.key) || r.name;
   const curP = r.price;
-  
-  // Fredrik & Louisa calculation logic (in EUR)
-  const fredVal = fredPrices.get(r.key) || '';
-  let compHtml = '';
-  if(curP != null && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0) {
-    const fPrice = Number(fredVal);
-    const diffPct = round2(((fPrice - curP) / fPrice) * 100);
-    const isCheaper = curP < fPrice;
-    const colorStyle = isCheaper ? 'color:var(--down)' : 'color:var(--up)';
-    const textDesc = isCheaper ? 'cheaper in price list' : 'more expensive in price list';
-    compHtml = '<div class="note" style="border: 1px dashed var(--gold); background:var(--surface2);">Fredrik & Louisa (EUR): <b>' + fmtPrice(fPrice, 2) + ' €</b><br><span style="' + colorStyle + '; font-weight:800;">Price list is ' + Math.abs(diffPct) + '% ' + textDesc + '</span></div>';
-  }
-
   openSheet('<div class="eyebrow">'+monthLabel(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
     (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">Not in the '+monthLabel(view.cur.month)+' list. Last known price: <b>'+fmtPrice(r.prev,dec)+'</b>.</div>')+
-    '<div style="margin-top:14px;"><label class="lbl" for="fredInput">FREDRIK & LOUISA PRICE (IN EUROS)</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="e.g. 129.9" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">Save</button></div></div>'+
-    compHtml+
     (series.length>=1 ? chartSvg(series, L.length) : '')+
     '<div class="grid3"><div class="tile"><div class="k">Lowest</div><div class="v">'+fmtPrice(lo.p,dec)+'</div><div class="s">'+monthLabel(lo.month,true)+'</div></div>'+
     '<div class="tile"><div class="k">Highest</div><div class="v">'+fmtPrice(hi.p,dec)+'</div><div class="s">'+monthLabel(hi.month,true)+'</div></div>'+
     '<div class="tile"><div class="k">Average</div><div class="v">'+fmtPrice(avg,dec)+'</div><div class="s">'+series.length+(series.length===1?' month':' months')+'</div></div></div>'+
-    '<table class="htab">'+rowsH+'</table><button class="btn sec" data-a="closeSheet">Close</button>',
-    sheetEl => {
-      sheetEl.querySelector('#fredSave').addEventListener('click', () => {
-        const val = sheetEl.querySelector('#fredInput').value.trim();
-        if(val === '' || isNaN(val)){
-          fredPrices.delete(r.key);
-        } else {
-          fredPrices.set(r.key, Number(val));
-        }
-        persistFred();
-        toast('Fredrik price saved');
-        openDetail(r);
-        renderList();
-      });
-    }
-  );
+    '<table class="htab">'+rowsH+'</table><button class="btn sec" data-a="closeSheet">Close</button>');
 }
 
 /* ============ LISTS tab ============ */
