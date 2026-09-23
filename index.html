@@ -100,6 +100,7 @@ h1,h2,h3,p{margin:0}
 .r-side{flex:none;text-align:right}
 .r-price{font-size:1.15rem;font-weight:800;letter-spacing:-.01em}
 .r-price small{font-size:.68rem;color:var(--muted);font-weight:700;margin-left:3px}
+.r-conv{font-size:.74rem;color:var(--muted);font-weight:700;margin-top:2px;white-space:nowrap}
 .r-price.dim{color:var(--muted)}
 .spark{display:block;margin:5px 0 0 auto;width:60px;height:18px}
 .tr{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px}
@@ -217,6 +218,18 @@ const Native = window.PerfumeAndroid || null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const round2 = n => Math.round(n*100)/100;
+const CURRENCIES = { EUR:'€', NOK:'kr', RSD:'RSD', SEK:'kr', DKK:'kr', USD:'$', GBP:'£', CHF:'CHF' };
+/** Код валуте из текста („€“, „RSD“, „din“, „NOK“…); '' кад се не препозна. */
+function curCode(s){
+  const u = String(s||'').trim().toUpperCase();
+  if(CURRENCIES[u]) return u;
+  if(/€|\bEUR/.test(u)) return 'EUR';
+  if(/RSD|\bDIN|ДИН/.test(u)) return 'RSD';
+  if(/NOK|\bKR\b/.test(u)) return 'NOK';
+  if(/\$|USD/.test(u)) return 'USD';
+  if(/£|GBP/.test(u)) return 'GBP';
+  return '';
+}
 function newId(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
 function norm(s){
   return String(s).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase()
@@ -276,10 +289,12 @@ const TR = {
   '{a}% јефтиније': ['{a}% cheaper', '{a}% billigere'],
   '{a}% скупље': ['{a}% more expensive', '{a}% dyrere'],
   /* детаљи */
-  'Ценовник је {a}% јефтинији': ['Price list is {a}% cheaper', 'Prislisten er {a}% billigere'],
-  'Ценовник је {a}% скупљи': ['Price list is {a}% more expensive', 'Prislisten er {a}% dyrere'],
+  'Ценовник у {a}: <b>{b}</b>': ['Price list in {a}: <b>{b}</b>', 'Prislisten i {a}: <b>{b}</b>'],
+  'Ценовник је {a}% јефтинији ({b})': ['Price list is {a}% cheaper ({b})', 'Prislisten er {a}% billigere ({b})'],
+  'Ценовник је {a}% скупљи ({b})': ['Price list is {a}% more expensive ({b})', 'Prislisten er {a}% dyrere ({b})'],
+  'Упиши курс {a} → {b} у картици Листе да се израчуна разлика.': ['Enter the {a} → {b} exchange rate on the Lists tab to work out the difference.', 'Legg inn kursen {a} → {b} under Lister for å beregne forskjellen.'],
   'Нема у листи за {a}. Последња позната цена: <b>{b}</b>.': ['Not in the {a} list. Last known price: <b>{b}</b>.', 'Ikke i listen for {a}. Siste kjente pris: <b>{b}</b>.'],
-  'ЦЕНА FREDRIK & LOUISA (У ЕВРИМА)': ['FREDRIK & LOUISA PRICE (IN EUROS)', 'FREDRIK & LOUISA-PRIS (I EURO)'],
+  'ЦЕНА FREDRIK & LOUISA (У {a})': ['FREDRIK & LOUISA PRICE (IN {a})', 'FREDRIK & LOUISA-PRIS (I {a})'],
   'нпр. 129.9': ['e.g. 129.9', 'f.eks. 129.9'],
   'Сачувај': ['Save', 'Lagre'],
   'Fredrik цена је сачувана': ['Fredrik price saved', 'Fredrik-pris lagret'],
@@ -302,12 +317,30 @@ const TR = {
   'увезено {a}': ['imported {a}', 'importert {a}'],
   'Прикажи': ['View', 'Vis'],
   'Обриши': ['Delete', 'Slett'],
-  'Ознака валуте': ['Currency label', 'Valutamerke'],
-  'Није обавезно. Приказује се поред цена, нпр. RSD или €.': ['Optional. Shown next to prices, for example RSD or €.', 'Valgfritt. Vises ved siden av prisene, for eksempel NOK eller €.'],
-  'нпр. RSD': ['e.g. RSD', 'f.eks. NOK'],
-  'Ознака валуте је сачувана': ['Currency label saved', 'Valutamerke lagret'],
+  'Валута и курс': ['Currency and exchange rate', 'Valuta og valutakurs'],
+  'Цене из ценовника се претварају у валуту Fredrik & Louisa цена да би се израчунала разлика.': ['Price list prices are converted to the currency of the Fredrik & Louisa prices to work out the difference.', 'Prisene i prislisten regnes om til valutaen for Fredrik & Louisa-prisene for å beregne forskjellen.'],
+  'ЦЕНОВНИК': ['PRICE LIST', 'PRISLISTE'],
+  'Ручни курс': ['Manual rate', 'Manuell kurs'],
+  'Аутоматски курс, {a}': ['Automatic rate, {a}', 'Automatisk kurs, {a}'],
+  'Курс још није преузет.': ['The exchange rate hasn’t been downloaded yet.', 'Valutakursen er ikke hentet ennå.'],
+  'РУЧНИ КУРС (ПРАЗНО = АУТОМАТСКИ)': ['MANUAL RATE (EMPTY = AUTOMATIC)', 'MANUELL KURS (TOM = AUTOMATISK)'],
+  'Освежи курс': ['Refresh rate', 'Oppdater kurs'],
+  'Преузимам курс…': ['Downloading exchange rate…', 'Henter valutakurs…'],
+  'Курс је освежен': ['Exchange rate updated', 'Valutakursen er oppdatert'],
+  'Курс није преузет. Провери интернет или упиши курс ручно.': ['Couldn’t get the exchange rate. Check your connection or enter the rate manually.', 'Kunne ikke hente valutakursen. Sjekk nettet eller skriv inn kursen manuelt.'],
+  'Валута је сачувана': ['Currency saved', 'Valuta lagret'],
+  'Ручни курс је сачуван': ['Manual rate saved', 'Manuell kurs lagret'],
+  'Користи се аутоматски курс': ['Using the automatic rate', 'Bruker automatisk kurs'],
+  'ВАЛУТА ЦЕНОВНИКА': ['PRICE LIST CURRENCY', 'PRISLISTENS VALUTA'],
+  'Апликација': ['App', 'App'],
+  'Верзија {a}': ['Version {a}', 'Versjon {a}'],
+  'Провери да ли има ажурирање': ['Check for updates', 'Se etter oppdatering'],
+  'Проверавам да ли има нова верзија…': ['Checking for updates…', 'Ser etter oppdatering…'],
+  'Нова верзија је пронађена. Ажурирам…': ['New version found. Updating…', 'Ny versjon funnet. Oppdaterer…'],
+  'Имаш најновију верзију': ['You have the latest version', 'Du har nyeste versjon'],
+  'Провера није успела. Провери интернет и покушај поново.': ['Check failed. Check your connection and try again.', 'Sjekken mislyktes. Sjekk nettet og prøv igjen.'],
   'Бекап': ['Backup', 'Sikkerhetskopi'],
-  'Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, ознаком валуте и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.': ['Your lists are stored on this device only. A backup is one small file with every month, the currency label and your Fredrik & Louisa prices. You don’t need to keep the Excel files once they are imported.', 'Listene lagres bare på denne enheten. En sikkerhetskopi er én liten fil med alle månedene, valutamerket og Fredrik & Louisa-prisene dine. Du trenger ikke å beholde Excel-filene etter at de er importert.'],
+  'Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, валутама и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.': ['Your lists are stored on this device only. A backup is one small file with every month, the currencies and your Fredrik & Louisa prices. You don’t need to keep the Excel files once they are imported.', 'Listene lagres bare på denne enheten. En sikkerhetskopi er én liten fil med alle månedene, valutaene og Fredrik & Louisa-prisene dine. Du trenger ikke å beholde Excel-filene etter at de er importert.'],
   'Последњи бекап: <b style="color:var(--text)">{a}</b>': ['Last export: <b style="color:var(--text)">{a}</b>', 'Siste sikkerhetskopi: <b style="color:var(--text)">{a}</b>'],
   'Никад': ['Never', 'Aldri'],
   'Сачувај бекап': ['Export backup', 'Eksporter sikkerhetskopi'],
@@ -472,13 +505,69 @@ function normalizeData(r){
     l.items.forEach(x => { if(Array.isArray(x) && typeof x[0]==='string' && Number.isFinite(Number(x[1]))){ const k = norm(x[0]); if(k) seen.set(k,[x[0].trim(),Number(x[1])]); } });
     map.set(l.month,{ id:String(l.id||newId()), month:l.month, file:String(l.file||'').slice(0,120), at:String(l.at||''), items:[...seen.values()] });
   });
-  return { currency: typeof r.currency==='string' ? r.currency.slice(0,8) : '', lists:[...map.values()].sort((a,b)=>a.month<b.month?-1:1) };
+  return { currency: curCode(r.currency), lists:[...map.values()].sort((a,b)=>a.month<b.month?-1:1) };
 }
 function loadData(){ try{ const d = normalizeData(JSON.parse(localStorage.getItem(KEY))); if(d) return d; }catch(e){} return { currency:'', lists:[] }; }
 function loadFredData(){ try{ const d = JSON.parse(localStorage.getItem(FRED_KEY)); if(d && typeof d==='object') return new Map(Object.entries(d)); }catch(e){} return new Map(); }
 let data = loadData();
 let fredPrices = loadFredData();
 let lastBackup = (() => { try{ return localStorage.getItem(BACKUP_KEY) || null; }catch(e){ return null; } })();
+
+/* ============ валуте и курс ============ */
+/* data.currency је валута ценовника, cur.fred валута Fredrik & Louisa цена. Кад се разликују,
+   цене из ценовника се множе курсом (1 валута ценовника = rate() F&L валуте). */
+const CUR_KEY = 'perfumeCurrencyV1';
+let cur = (() => {
+  let c = null; try{ c = JSON.parse(localStorage.getItem(CUR_KEY)); }catch(e){}
+  return normalizeCur(c);
+})();
+function normalizeCur(c){
+  c = c && typeof c==='object' ? c : {};
+  const okRate = x => x && typeof x.pair==='string' && Number(x.rate)>0;
+  return { fred: CURRENCIES[c.fred] ? c.fred : 'NOK',
+    manual: okRate(c.manual) ? { pair:c.manual.pair, rate:Number(c.manual.rate) } : null,
+    auto: okRate(c.auto) ? { pair:c.auto.pair, rate:Number(c.auto.rate), at:String(c.auto.at||'') } : null };
+}
+function persistCur(){ try{ localStorage.setItem(CUR_KEY, JSON.stringify(cur)); }catch(e){} }
+const pairKey = () => data.currency+'>'+cur.fred;
+const needsRate = () => !!data.currency && data.currency!==cur.fred;
+/** Колико F&L валуте вреди 1 јединица валуте ценовника; null кад курс још није познат. */
+function rate(){
+  if(!needsRate()) return 1;
+  if(cur.manual && cur.manual.pair===pairKey()) return cur.manual.rate;
+  if(cur.auto && cur.auto.pair===pairKey()) return cur.auto.rate;
+  return null;
+}
+async function fetchJson(url){ const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error(r.status); return r.json(); }
+// Бесплатни извори без кључа, редом; први који врати курс побеђује.
+const RATE_SOURCES = [
+  async (f,to) => { const d = await fetchJson('https://open.er-api.com/v6/latest/'+f); return d.result==='success' && d.rates ? d.rates[to] : null; },
+  async (f,to) => { const l = f.toLowerCase(), d = await fetchJson('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/'+l+'.json'); return d[l] ? d[l][to.toLowerCase()] : null; },
+  async (f,to) => { const d = await fetchJson('https://api.frankfurter.app/latest?from='+f+'&to='+to); return d.rates ? d.rates[to] : null; }
+];
+let rateBusy = false;
+async function refreshRate(byUser){
+  if(!needsRate() || rateBusy) return;
+  const f = data.currency, to = cur.fred; rateBusy = true;
+  if(byUser) toast(t('Преузимам курс…'));
+  for(const src of RATE_SOURCES){
+    let v = null; try{ v = Number(await src(f,to)); }catch(e){}
+    if(v>0){
+      cur.auto = { pair:f+'>'+to, rate:v, at:new Date().toISOString() }; persistCur(); rateBusy = false;
+      render(); if(byUser) toast(t('Курс је освежен'));
+      return;
+    }
+  }
+  rateBusy = false;
+  if(byUser) toast(t('Курс није преузет. Провери интернет или упиши курс ручно.'));
+}
+/** Аутоматски курс се освежава највише двапут дневно. */
+function maybeRefreshRate(){
+  if(!needsRate()) return;
+  const a = cur.auto;
+  if(a && a.pair===pairKey() && Date.now()-new Date(a.at).getTime() < 12*36e5) return;
+  refreshRate(false);
+}
 function persistFred(){
   try{
     const obj = {}; fredPrices.forEach((v,k)=>{ obj[k]=v; });
@@ -579,7 +668,19 @@ function setTab(t){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===t));
   window.scrollTo(0,0);
 }
-const cur$ = () => data.currency ? ' <small>'+esc(data.currency)+'</small>' : '';
+const sym = c => CURRENCIES[c] || '';
+const cur$ = () => data.currency ? ' <small>'+esc(sym(data.currency))+'</small>' : '';
+// Круне и динари без децимала; евро, долар… са две испод 100.
+const fredStr = v => fmtNum(v, ['EUR','USD','GBP','CHF'].includes(cur.fred) && Math.abs(v)<100 ? 2 : 0)+' '+sym(cur.fred);
+/** „= 1.520 kr“ испод цене кад је ценовник у другој валути. */
+function convHtml(p){ const k = rate(); return p!=null && needsRate() && k ? '= '+fredStr(p*k) : ''; }
+/** Поређење са Fredrik & Louisa ценом у F&L валути; conv је null док курс није познат. */
+function fredCompare(key, p){
+  const f = Number(fredPrices.get(key)); if(!(f>0) || p==null) return null;
+  const k = rate(); if(!k) return { f, conv:null };
+  const conv = p*k;
+  return { f, conv, diff:conv-f, pct:Math.abs(round2((f-conv)/f*100)), cheaper:conv<f };
+}
 const priceStr = (p,dec) => fmtPrice(p,dec)+cur$();
 const sgnPrice = (c,dec) => (c>0?'+':'−')+fmtPrice(Math.abs(c),dec);
 const sgnPct = p => (p>0?'+':p<0?'−':'')+fmtNum(Math.abs(p),1)+'%';
@@ -678,18 +779,14 @@ function renderList(){
     const p = r.price!=null ? r.price : r.prev;
 
     // Fredrik & Louisa price badge for list items
-    const fredVal = fredPrices.get(r.key);
+    const fc = fredCompare(r.key, p);
     let fredBadge = '';
-    if(fredVal !== undefined && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0 && p != null) {
-      const fPrice = Number(fredVal);
-      const diffPct = Math.abs(round2(((fPrice - p) / fPrice) * 100));
-      const isCheaper = p < fPrice;
-      const badgeColor = isCheaper ? 'color:var(--down);background:var(--down-soft)' : 'color:var(--up);background:var(--up-soft)';
-      fredBadge = '<span class="tr" style="'+badgeColor+'">F&L ' + fmtPrice(fPrice, 2) + ' € (' + t(isCheaper?'{a}% јефтиније':'{a}% скупље',{a:fmtNum(diffPct,1)}) + ')</span>';
-    }
+    if(fc && fc.conv==null) fredBadge = '<span class="tr same">F&L '+fredStr(fc.f)+'</span>';
+    else if(fc) fredBadge = '<span class="tr '+(fc.cheaper?'down':'up')+'">F&L '+fredStr(fc.f)+' ('+t(fc.cheaper?'{a}% јефтиније':'{a}% скупље',{a:fmtNum(fc.pct,1)})+')</span>';
+    const conv = convHtml(p);
 
     h += '<button class="row" data-a="open" data-i="'+i+'"><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+fredBadge+'</div></div>'+
-      '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+sparkHtml(r)+'</div></button>';
+      '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+(conv?'<div class="r-conv">'+conv+'</div>':'')+sparkHtml(r)+'</div></button>';
   });
   h += '</div>';
   if(results.length>shown.length) h += '<button class="btn sec more" data-a="more">'+t('Прикажи још {a} · остало {b}',{a:Math.min(50,results.length-shown.length),b:fmtNum(results.length-shown.length,0)})+'</button>';
@@ -732,20 +829,25 @@ function openDetail(r){
   const name = names.get(r.key) || r.name;
   const curP = r.price;
 
-  // Fredrik & Louisa calculation logic (in EUR)
-  const fredVal = fredPrices.get(r.key) || '';
+  // Fredrik & Louisa comparison, in the F&L currency
+  const fredVal = fredPrices.get(r.key) ?? '';
+  const fc = fredCompare(r.key, curP);
   let compHtml = '';
-  if(curP != null && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0) {
-    const fPrice = Number(fredVal);
-    const diffPct = Math.abs(round2(((fPrice - curP) / fPrice) * 100));
-    const isCheaper = curP < fPrice;
-    const colorStyle = isCheaper ? 'color:var(--down)' : 'color:var(--up)';
-    compHtml = '<div class="note" style="border: 1px dashed var(--gold); background:var(--surface2);">Fredrik & Louisa (EUR): <b>' + fmtPrice(fPrice, 2) + ' €</b><br><span style="' + colorStyle + '; font-weight:800;">' + t(isCheaper?'Ценовник је {a}% јефтинији':'Ценовник је {a}% скупљи',{a:fmtNum(diffPct,1)}) + '</span></div>';
+  if(fc){
+    compHtml = '<div class="note" style="border: 1px dashed var(--gold); background:var(--surface2);">Fredrik & Louisa: <b>'+fredStr(fc.f)+'</b>';
+    if(fc.conv==null) compHtml += '<br>'+t('Упиши курс {a} → {b} у картици Листе да се израчуна разлика.',{a:data.currency,b:cur.fred});
+    else {
+      if(needsRate()) compHtml += '<br>'+t('Ценовник у {a}: <b>{b}</b>',{a:cur.fred,b:fredStr(fc.conv)});
+      const d = (fc.diff>0?'+':'−')+fredStr(Math.abs(fc.diff));
+      compHtml += '<br><span style="color:var(--'+(fc.cheaper?'down':'up')+');font-weight:800">'+t(fc.cheaper?'Ценовник је {a}% јефтинији ({b})':'Ценовник је {a}% скупљи ({b})',{a:fmtNum(fc.pct,1),b:d})+'</span>';
+    }
+    compHtml += '</div>';
   }
+  const convD = convHtml(curP);
 
   openSheet('<div class="eyebrow">'+MT(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
-    (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">'+t('Нема у листи за {a}. Последња позната цена: <b>{b}</b>.',{a:monthLabel(view.cur.month),b:fmtPrice(r.prev,dec)})+'</div>')+
-    '<div style="margin-top:14px;"><label class="lbl" for="fredInput">'+t('ЦЕНА FREDRIK & LOUISA (У ЕВРИМА)')+'</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="'+t('нпр. 129.9')+'" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">'+t('Сачувај')+'</button></div></div>'+
+    (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div>'+(convD?'<div class="r-conv" style="font-size:.95rem;margin:-2px 0 8px">'+convD+'</div>':'')+'<div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">'+t('Нема у листи за {a}. Последња позната цена: <b>{b}</b>.',{a:monthLabel(view.cur.month),b:fmtPrice(r.prev,dec)})+'</div>')+
+    '<div style="margin-top:14px;"><label class="lbl" for="fredInput">'+t('ЦЕНА FREDRIK & LOUISA (У {a})',{a:cur.fred})+'</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="'+t('нпр. 129.9')+'" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">'+t('Сачувај')+'</button></div></div>'+
     compHtml+
     (series.length>=1 ? chartSvg(series, Ls.length) : '')+
     '<div class="grid3"><div class="tile"><div class="k">'+t('Најнижа')+'</div><div class="v">'+fmtPrice(lo.p,dec)+'</div><div class="s">'+MT(lo.month,true)+'</div></div>'+
@@ -785,11 +887,26 @@ function renderLists(){
         '<div class="btns"><button class="btn sec sm" data-a="viewList" data-v="'+l.month+'">'+t('Прикажи')+'</button><button class="btn danger sm" data-a="delList" data-v="'+l.month+'">'+t('Обриши')+'</button></div></div>';
     }
   }
-  h += '<div class="card"><h3>'+t('Ознака валуте')+'</h3><p>'+t('Није обавезно. Приказује се поред цена, нпр. RSD или €.')+'</p><input class="field" id="curInput" maxlength="8" placeholder="'+t('нпр. RSD')+'" value="'+esc(data.currency)+'" style="margin-top:12px"></div>';
-  h += '<div class="card"><h3>'+t('Бекап')+'</h3><p>'+t('Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, ознаком валуте и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.')+'</p>'+
+  h += currencyCard();
+  h += '<div class="card"><h3>'+t('Бекап')+'</h3><p>'+t('Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, валутама и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.')+'</p>'+
     '<p style="margin-top:8px">'+t('Последњи бекап: <b style="color:var(--text)">{a}</b>',{a:lastBackup?dateLabel(lastBackup):t('Никад')})+'</p><button class="btn" data-a="export">'+t('Сачувај бекап')+'</button><button class="btn sec" data-a="importBackup">'+t('Врати из бекапа')+'</button></div>';
+  const ver = Native && Native.getVersion ? Native.getVersion() : '';
+  h += '<div class="card"><h3>📲 '+t('Апликација')+'</h3>'+(ver?'<p>'+t('Верзија {a}',{a:esc(ver)})+'</p>':'')+'<button class="btn sec" data-a="checkUpdate">'+t('Провери да ли има ажурирање')+'</button></div>';
   h += '<div class="card"><h3>🌍 '+t('Језик')+'</h3><div class="langs">'+LANGS.map(([v,l])=>'<button class="chip '+(lang()===v?'on':'')+'" data-a="lang" data-v="'+v+'">'+l+'</button>').join('')+'</div></div>';
   el.innerHTML = L(h);
+}
+const curOptions = (sel, none) => (none?'<option value="">—</option>':'')+Object.keys(CURRENCIES).map(c=>'<option value="'+c+'"'+(c===sel?' selected':'')+'>'+c+' ('+CURRENCIES[c]+')</option>').join('');
+function currencyCard(){
+  let h = '<div class="card"><h3>'+t('Валута и курс')+'</h3><p>'+t('Цене из ценовника се претварају у валуту Fredrik & Louisa цена да би се израчунала разлика.')+'</p>'+
+    '<div class="two"><div><label class="lbl" for="curList">'+t('ЦЕНОВНИК')+'</label><select class="field" id="curList">'+curOptions(data.currency,true)+'</select></div>'+
+    '<div><label class="lbl" for="curFred">FREDRIK & LOUISA</label><select class="field" id="curFred">'+curOptions(cur.fred,false)+'</select></div></div>';
+  if(needsRate()){
+    const k = rate(), man = cur.manual && cur.manual.pair===pairKey(), a = cur.auto && cur.auto.pair===pairKey() ? cur.auto : null;
+    h += '<div class="note">'+(k ? '1 '+data.currency+' = <b>'+fmtNum(k, k>=100?2:4).replace(/([.,]\d*?)0+$/,'$1').replace(/[.,]$/,'')+' '+cur.fred+'</b><br>'+(man?t('Ручни курс'):t('Аутоматски курс, {a}',{a:dateLabel(a.at)})) : t('Курс још није преузет.'))+'</div>'+
+      '<label class="lbl" for="rateManual">'+t('РУЧНИ КУРС (ПРАЗНО = АУТОМАТСКИ)')+'</label><input class="field" id="rateManual" type="number" step="any" min="0" placeholder="'+(a?String(round2(a.rate*1e4)/1e4):'')+'" value="'+(man?cur.manual.rate:'')+'">'+
+      '<button class="btn sec" data-a="refreshRate">'+t('Освежи курс')+'</button>';
+  }
+  return h+'</div>';
 }
 function askDelete(month){
   const Ls = data.lists, k = Ls.findIndex(l=>l.month===month); if(k<0) return;
@@ -842,12 +959,16 @@ function openImport(fileName, src){
   openSheet('<div class="eyebrow">'+t('Нова листа')+'</div><h2>'+t('Увоз ценовника')+'</h2><div class="note" style="margin-top:10px" id="imFile"></div>'+
     (src.names.length>1 ? '<label class="lbl" for="imSheet">'+t('ЛИСТ')+'</label><select class="field" id="imSheet">'+src.names.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select>' : '')+
     '<label class="lbl" for="imMonth">'+t('МЕСЕЦ ОВЕ ЛИСТЕ')+'</label><input class="field" type="month" id="imMonth">'+
+    '<label class="lbl" for="imCur">'+t('ВАЛУТА ЦЕНОВНИКА')+'</label><select class="field" id="imCur">'+curOptions('',true)+'</select>'+
     '<div class="two"><div><label class="lbl" for="imName">'+t('КОЛОНА ПАРФЕМ')+'</label><select class="field" id="imName"></select></div><div><label class="lbl" for="imPrice">'+t('КОЛОНА ЦЕНА')+'</label><select class="field" id="imPrice"></select></div></div>'+
     '<label class="chk"><input type="checkbox" id="imHdr"> '+t('Први ред је заглавље')+'</label><div id="imPrev"></div>',
   s => {
     const q = x => s.querySelector(x);
     q('#imFile').innerHTML = L('<b>'+esc(fileName)+'</b>');
     q('#imMonth').value = month;
+    // Валута из заглавља или ћелија колоне цена (нпр. „Cena EUR“, „129 €“), иначе досадашња.
+    const detectCur = () => { const x = [String(rows[0]?.[priceCol]??'')]; rows.slice(0,60).forEach(r=>{ if(typeof r[priceCol]==='string') x.push(r[priceCol]); }); return curCode(x.join(' ')); };
+    q('#imCur').value = detectCur() || data.currency;
     function cols(){
       const lab = c => (hdr && rows[0] && String(rows[0][c]??'').trim()!=='') ? String(rows[0][c]).slice(0,28) : t('Колона {a}',{a:colLetter(c)});
       const o = sel => Array.from({length:ncols},(_,c)=>'<option value="'+c+'"'+(c===sel?' selected':'')+'>'+esc(lab(c))+'</option>').join('');
@@ -881,17 +1002,18 @@ function openImport(fileName, src){
     cols(); preview();
     q('#imMonth').addEventListener('change', preview);
     q('#imName').addEventListener('change', e=>{ nameCol = Number(e.target.value); preview(); });
-    q('#imPrice').addEventListener('change', e=>{ priceCol = Number(e.target.value); preview(); });
+    q('#imPrice').addEventListener('change', e=>{ priceCol = Number(e.target.value); const d = detectCur(); if(d) q('#imCur').value = d; preview(); });
     q('#imHdr').addEventListener('change', e=>{ hdr = e.target.checked; cols(); preview(); });
     const sh = q('#imSheet'); if(sh) sh.addEventListener('change', e=>{ sheet = src.names[Number(e.target.value)]; loadRows(); cols(); preview(); });
     q('#imPrev').addEventListener('click', e => {
       if(e.target.id!=='imGo') return;
       if(!/^\d{4}-\d{2}$/.test(month)){ toast(t('Изабери месец')); return; }
+      const ic = q('#imCur').value; if(ic!==data.currency){ data.currency = ic; }
       data.lists = data.lists.filter(l=>l.month!==month);
       data.lists.push({ id:newId(), month, file:fileName.slice(0,120), at:new Date().toISOString(), items });
       data.lists.sort((a,b)=>a.month<b.month?-1:1);
       ui.month = month; ui.filter = 'all'; ui.limit = 50;
-      buildCache(); const saved = persist(); closeSheet(); setTab('prices'); render();
+      buildCache(); const saved = persist(); closeSheet(); setTab('prices'); render(); maybeRefreshRate();
       if(!(saved && offerDeleteFile(fileName, items.length, month))) toast(t('Увезено {a} за {b}',{a:P(items.length,'perf'),b:monthLabel(month,true)}));
     });
   });
@@ -920,7 +1042,7 @@ $('listFile').addEventListener('change', async ev => {
 /* ============ BACKUP ============ */
 function exportData(){
   const fred = {}; fredPrices.forEach((v,k)=>{ fred[k]=v; });
-  const json = JSON.stringify({ app:'perfume-prices', version:2, exported:new Date().toISOString(), currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})), fred });
+  const json = JSON.stringify({ app:'perfume-prices', version:2, exported:new Date().toISOString(), currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})), fred, cur:{ fred:cur.fred, manual:cur.manual } });
   const d = new Date(), name = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
   lastBackup = d.toISOString(); try{ localStorage.setItem(BACKUP_KEY, lastBackup); }catch(e){}
   // Android app: WebView can't download blob: URLs, so hand the file to the native side.
@@ -941,6 +1063,8 @@ $('backupFile').addEventListener('change', ev => {
       ? new Map(Object.entries(raw.fred).filter(([k,v])=>k && Number.isFinite(Number(v)) && Number(v)>0).map(([k,v])=>[k,Number(v)])) : null;
     confirmSheet(t('Заменити листе?'), t('Бекап има {a}{b}. Тренутни подаци ({c}) биће замењени.',{a:P(d.lists.length,'list'),b:fred?t(' и Fredrik & Louisa цене ({a})',{a:fred.size}):'',c:P(data.lists.length,'list')}), t('Замени бекапом'), ()=>{
       data = d; if(fred){ fredPrices = fred; persistFred(); }
+      if(raw.cur && typeof raw.cur==='object'){ cur = normalizeCur({ ...raw.cur, auto:cur.auto }); persistCur(); }
+      maybeRefreshRate();
       ui.month = null; buildCache(); persist(); render(); toast(t('Бекап је враћен'));
     });
   };
@@ -960,12 +1084,21 @@ const actions = {
   delList: el => askDelete(el.dataset.v),
   export: () => exportData(),
   importBackup: () => $('backupFile').click(),
-  lang: el => setLang(el.dataset.v)
+  lang: el => setLang(el.dataset.v),
+  refreshRate: () => refreshRate(true),
+  checkUpdate: () => checkForUpdate()
 };
 document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if(el && actions[el.dataset.a]) actions[el.dataset.a](el); });
 document.addEventListener('change', e => {
   if(e.target.id==='sortSel'){ ui.sort = e.target.value; ui.limit = 50; renderList(); }
-  if(e.target.id==='curInput'){ data.currency = e.target.value.trim().slice(0,8); persist(); renderHead(); renderList(); toast(t('Ознака валуте је сачувана')); }
+  if(e.target.id==='curList'){ data.currency = e.target.value; persist(); render(); maybeRefreshRate(); toast(t('Валута је сачувана')); }
+  if(e.target.id==='curFred'){ cur.fred = e.target.value; persistCur(); render(); maybeRefreshRate(); toast(t('Валута је сачувана')); }
+  if(e.target.id==='rateManual'){
+    const v = Number(e.target.value);
+    cur.manual = v>0 ? { pair:pairKey(), rate:v } : null; persistCur(); render();
+    toast(v>0 ? t('Ручни курс је сачуван') : t('Користи се аутоматски курс'));
+    if(!(v>0)) maybeRefreshRate();
+  }
 });
 let qT;
 $('q').addEventListener('input', e => {
@@ -977,6 +1110,28 @@ $('qClear').addEventListener('click', () => { const q = $('q'); q.value = ''; $(
 function render(){ buildView(); renderHead(); renderTool(); renderList(); renderLists(); }
 renderChrome();
 render();
+maybeRefreshRate();
+
+/* ============ ажурирање ============ */
+// Android: the native side asks GitHub Releases and shows the result itself.
+// Web/PWA: compare the page the service worker cached with the one on the server.
+async function checkForUpdate(){
+  if(Native && Native.checkUpdate){ Native.checkUpdate(); return; }
+  toast(t('Проверавам да ли има нова верзија…'));
+  try{
+    // Unique URL + no-store so neither the service worker nor the HTTP cache answers.
+    const res = await fetch('index.html?check='+Date.now(), { cache:'no-store' });
+    if(!res.ok) throw new Error(res.status);
+    const fresh = await res.text();
+    const cached = window.caches ? await caches.match('./index.html') : null;
+    const reg = navigator.serviceWorker ? await navigator.serviceWorker.getRegistration() : null;
+    if(reg) reg.update().catch(()=>{});
+    if(cached && (await cached.text()) !== fresh){
+      toast(t('Нова верзија је пронађена. Ажурирам…'));
+      setTimeout(()=>location.reload(), 900);
+    } else toast(t('Имаш најновију верзију'));
+  }catch(err){ toast(t('Провера није успела. Провери интернет и покушај поново.')); }
+}
 
 // Offline support for the installed web app. The Android app bundles the page itself.
 if('serviceWorker' in navigator && location.hostname !== 'appassets.androidplatform.net' && location.protocol !== 'file:'){

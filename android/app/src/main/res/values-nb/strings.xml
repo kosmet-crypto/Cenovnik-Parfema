@@ -2,10 +2,13 @@
 <resources>
     <string name="app_name">Parfymepriser</string>
     <string name="update_title">Ny versjon</string>
-    <string name="update_message">Parfymepriser %1$s er klar. Last den ned og åpne filen for å oppdatere. Prislistene dine blir liggende.</string>
-    <string name="update_download">Last ned</string>
+    <string name="update_message">Versjon %1$s er klar (du har %2$s). Last ned filen og åpne den for å oppdatere. Prislistene dine blir liggende.</string>
+    <string name="update_download">Oppdater nå</string>
     <string name="update_later">Senere</string>
     <string name="no_file_app">Ingen app for å lagre filer</string>
     <string name="backup_saved">Sikkerhetskopien er lagret</string>
     <string name="backup_failed">Kunne ikke lagre sikkerhetskopien</string>
+    <string name="update_checking">Ser etter oppdatering…</string>
+    <string name="update_none">Du har nyeste versjon (%1$s).</string>
+    <string name="update_failed">Sjekken mislyktes. Sjekk nettet og prøv igjen.</string>
 </resources>
