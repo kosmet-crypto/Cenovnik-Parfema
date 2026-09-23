@@ -1,15 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e0d0c">
-<title>Perfume Prices</title>
+<title>Ценовник парфема</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ценовник парфема">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-<!-- SheetJS reads .xlsx / .xls files in the browser (CSV and text work without it) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SheetJS 0.18.5 reads .xlsx / .xls files (CSV and text work without it). Bundled so it works offline. -->
+<script src="lib/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0e0d0c; --surface:#171513; --surface2:#211e1a; --line:#2d2924;
@@ -66,6 +71,7 @@ h1,h2,h3,p{margin:0}
 .chip.up.on{background:var(--up)}.chip.down.on{background:var(--down)}.chip.new.on{background:var(--new)}
 .chip.up:not(.on) i{color:var(--up)}.chip.down:not(.on) i{color:var(--down)}.chip.new:not(.on) i{color:var(--new)}
 .chip i{font-style:normal}
+.langs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .months{margin-top:2px}
 .months .chip{font-family:var(--serif);font-size:1rem;font-weight:700;padding:7px 15px}
 
@@ -157,6 +163,8 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 .note{background:var(--surface2);border-radius:14px;padding:12px 14px;font-size:.86rem;font-weight:600;color:var(--muted);line-height:1.5;margin-top:12px}
 .note b{color:var(--text)}
 .note.warn{background:var(--up-soft);color:var(--up)}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 0;padding:12px 14px;border-radius:16px;background:var(--gold-soft);border:1px solid var(--line);font-size:.84rem;font-weight:700;line-height:1.45}
+.banner button{flex:none;padding:9px 14px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:800;font-size:.84rem}
 .htab{width:100%;border-collapse:collapse;margin-top:6px;font-size:.9rem}
 .htab td{padding:10px 2px;border-top:1px solid var(--line);font-weight:700}
 .htab td:nth-child(2){text-align:right}.htab td:nth-child(3){text-align:right;font-size:.8rem}
@@ -165,18 +173,17 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 #toast.on{opacity:1;transform:translateX(-50%)}
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}#toast{transition:none}}
 </style>
-</head>
 <body>
 <div class="app">
-  <header class="mast"><div class="brand">Perfume <i>Prices</i></div><div class="tag">Monthly tracker</div></header>
+  <header class="mast"><div class="brand" id="brand"></div><div class="tag" id="brandTag"></div></header>
 
   <main class="tab on" id="tab-prices">
     <div id="pHead"></div>
     <div class="searchbar" id="searchBar">
       <div class="search" id="searchBox">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input id="q" type="search" placeholder="Search perfume or brand" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button id="qClear" aria-label="Clear search">✕</button>
+        <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="qClear">✕</button>
       </div>
     </div>
     <div id="pTool"></div>
@@ -186,10 +193,10 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
   <main class="tab" id="tab-lists"></main>
 </div>
 
-<nav class="nav" aria-label="Main">
+<nav class="nav" id="nav">
   <div class="nav-in">
-    <button data-a="tab" data-v="prices" class="on"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M5 19h14"/></svg>Prices</button>
-    <button data-a="tab" data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Lists</button>
+    <button data-a="tab" data-v="prices" class="on"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M5 19h14"/></svg><span id="navPrices"></span></button>
+    <button data-a="tab" data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="navLists"></span></button>
   </div>
 </nav>
 
@@ -203,19 +210,217 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 /* ============ helpers ============ */
 const KEY = 'perfumePricesV1';
 const FRED_KEY = 'perfumeFredrikPricesV1';
+const BACKUP_KEY = 'perfumeLastBackupV1';
+const LANG_KEY = 'perfumeLangV1';
+// Set inside the Android app (see android/.../MainActivity.java).
+const Native = window.PerfumeAndroid || null;
 const $ = id => document.getElementById(id);
-const collator = new Intl.Collator('en', { sensitivity:'base', numeric:true });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const round2 = n => Math.round(n*100)/100;
 function newId(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
 function norm(s){
-  return String(s).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
-    .replace(/[^a-z0-9\u0400-\u04ff]+/g,' ').trim();
+  return String(s).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase()
+    .replace(/[^a-z0-9Ѐ-ӿ]+/g,' ').trim();
 }
+
+/* ============ језик ============ */
+/* Српски (ћирилица) је основни језик: текстови у коду су кључеви, TR их преводи на [English, Norsk].
+   Латиница се добија пресловљавањем целог приказа. Ако неки превод фали, приказује се српски. */
+// Назив „Српски“ је у HTML ентитетима да га латиница не пресловљава.
+const LANGS = [['sr','&#1057;&#1088;&#1087;&#1089;&#1082;&#1080;'], ['sr-lat','Srpski (latinica)'], ['en','English'], ['no','Norsk']];
+const TR = {
+  'Ценовник <i>парфема</i>': ['Perfume <i>Prices</i>', 'Parfyme<i>priser</i>'],
+  'Ценовник парфема': ['Perfume Prices', 'Parfymepriser'],
+  'Месечни преглед': ['Monthly tracker', 'Månedlig oversikt'],
+  'Цене': ['Prices', 'Priser'],
+  'Листе': ['Lists', 'Lister'],
+  'Главни мени': ['Main', 'Hovedmeny'],
+  'Претражи парфем или бренд': ['Search perfume or brand', 'Søk etter parfyme eller merke'],
+  'Обриши претрагу': ['Clear search', 'Tøm søk'],
+  'Чување није успело. Сачувај бекап одмах.': ["Couldn't save. Export a backup now.", 'Kunne ikke lagre. Eksporter en sikkerhetskopi nå.'],
+  'Откажи': ['Cancel', 'Avbryt'],
+  /* трендови */
+  'било {a}': ['was {a}', 'var {a}'],
+  '● без промене': ['● unchanged', '● uendret'],
+  'НОВО': ['NEW', 'NY'],
+  'Нема у овој листи': ['Not in this list', 'Ikke i denne listen'],
+  'последња цена {a}': ['last price {a}', 'siste pris {a}'],
+  /* цене */
+  'Ценовник': ['Price list', 'Prisliste'],
+  ' · поређено са <b>{a}</b>': [' · compared with <b>{a}</b>', ' · sammenlignet med <b>{a}</b>'],
+  ' · увези листу за следећи месец да видиш кретање цена': [' · import next month’s list to see price trends', ' · importer neste måneds liste for å se prisutviklingen'],
+  'Просечна промена цена: {a}': ['Average price change: {a}', 'Gjennomsnittlig prisendring: {a}'],
+  'Све': ['All', 'Alle'],
+  'Поскупело': ['Up', 'Opp'],
+  'Појефтинило': ['Down', 'Ned'],
+  'Исто': ['Same', 'Uendret'],
+  'Ново': ['New', 'Nye'],
+  'Уклоњено': ['Removed', 'Fjernet'],
+  'Последњи бекап је старији од 2 недеље.': ['Your last backup is over 2 weeks old.', 'Siste sikkerhetskopi er over 2 uker gammel.'],
+  'Твоје листе постоје само на овом уређају.': ['Your lists live only on this device.', 'Listene dine finnes bare på denne enheten.'],
+  'Сачувај бекап да их не изгубиш.': ['Export a backup to keep them safe.', 'Eksporter en sikkerhetskopi for å ta vare på dem.'],
+  'Извези': ['Export', 'Eksporter'],
+  'Сортирање': ['Sort', 'Sortering'],
+  'Назив А–Ш': ['Name A–Z', 'Navn A–Å'],
+  'Цена: од најниже': ['Price: low to high', 'Pris: lav til høy'],
+  'Цена: од највише': ['Price: high to low', 'Pris: høy til lav'],
+  'Највеће поскупљење': ['Biggest increase', 'Største økning'],
+  'Највеће појефтињење': ['Biggest drop', 'Største nedgang'],
+  'Још нема ценовника': ['No price list yet', 'Ingen prisliste ennå'],
+  'Увези месечни Excel или CSV фајл са две колоне: парфем и цена. Сваког месеца увези нови и овде ће се видети кретање цена.': ['Import your monthly Excel or CSV file with two columns: perfume and price. Import a new one each month and price trends appear here.', 'Importer den månedlige Excel- eller CSV-filen med to kolonner: parfyme og pris. Importer en ny hver måned, så ser du prisutviklingen her.'],
+  'Увези ценовник': ['Import price list', 'Importer prisliste'],
+  'Нема резултата': ['Nothing found', 'Ingen treff'],
+  'Ниједан парфем не одговара „{a}“.': ['No perfume matches “{a}”.', 'Ingen parfyme passer til «{a}».'],
+  'Нема парфема у овом филтеру.': ['No perfumes in this filter.', 'Ingen parfymer i dette filteret.'],
+  'Прикажи још {a} · остало {b}': ['Show {a} more · {b} left', 'Vis {a} til · {b} igjen'],
+  '{a}% јефтиније': ['{a}% cheaper', '{a}% billigere'],
+  '{a}% скупље': ['{a}% more expensive', '{a}% dyrere'],
+  /* детаљи */
+  'Ценовник је {a}% јефтинији': ['Price list is {a}% cheaper', 'Prislisten er {a}% billigere'],
+  'Ценовник је {a}% скупљи': ['Price list is {a}% more expensive', 'Prislisten er {a}% dyrere'],
+  'Нема у листи за {a}. Последња позната цена: <b>{b}</b>.': ['Not in the {a} list. Last known price: <b>{b}</b>.', 'Ikke i listen for {a}. Siste kjente pris: <b>{b}</b>.'],
+  'ЦЕНА FREDRIK & LOUISA (У ЕВРИМА)': ['FREDRIK & LOUISA PRICE (IN EUROS)', 'FREDRIK & LOUISA-PRIS (I EURO)'],
+  'нпр. 129.9': ['e.g. 129.9', 'f.eks. 129.9'],
+  'Сачувај': ['Save', 'Lagre'],
+  'Fredrik цена је сачувана': ['Fredrik price saved', 'Fredrik-pris lagret'],
+  'Најнижа': ['Lowest', 'Lavest'],
+  'Највиша': ['Highest', 'Høyest'],
+  'Просек': ['Average', 'Snitt'],
+  'без промене': ['unchanged', 'uendret'],
+  'поново / ново': ['back / new', 'tilbake / ny'],
+  'нема у листи': ['not listed', 'ikke oppført'],
+  'Затвори': ['Close', 'Lukk'],
+  /* листе */
+  'Ценовници': ['Price lists', 'Prislister'],
+  'Увези нову листу': ['Import a new list', 'Importer en ny liste'],
+  'Excel (.xlsx, .xls) или CSV са две колоне: парфем и цена. Сваки увезени месец постаје посебна листа, а цене се пореде са претходним месецом.': ['Excel (.xlsx, .xls) or CSV with two columns: perfume and price. Each month you import becomes its own list, and prices are compared with the month before.', 'Excel (.xlsx, .xls) eller CSV med to kolonner: parfyme og pris. Hver måned du importerer blir en egen liste, og prisene sammenlignes med måneden før.'],
+  'Изабери фајл': ['Choose file', 'Velg fil'],
+  'Твоје листе': ['Your lists', 'Dine lister'],
+  'Најновије прво': ['Newest first', 'Nyeste først'],
+  'у односу на {a}: ▲ {b} · ▼ {c} · нових {d} · уклоњено {e}': ['vs {a}: ▲ {b} · ▼ {c} · new {d} · removed {e}', 'mot {a}: ▲ {b} · ▼ {c} · nye {d} · fjernet {e}'],
+  ' · просек {a}': [' · avg {a}', ' · snitt {a}'],
+  'увезено {a}': ['imported {a}', 'importert {a}'],
+  'Прикажи': ['View', 'Vis'],
+  'Обриши': ['Delete', 'Slett'],
+  'Ознака валуте': ['Currency label', 'Valutamerke'],
+  'Није обавезно. Приказује се поред цена, нпр. RSD или €.': ['Optional. Shown next to prices, for example RSD or €.', 'Valgfritt. Vises ved siden av prisene, for eksempel NOK eller €.'],
+  'нпр. RSD': ['e.g. RSD', 'f.eks. NOK'],
+  'Ознака валуте је сачувана': ['Currency label saved', 'Valutamerke lagret'],
+  'Бекап': ['Backup', 'Sikkerhetskopi'],
+  'Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, ознаком валуте и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.': ['Your lists are stored on this device only. A backup is one small file with every month, the currency label and your Fredrik & Louisa prices. You don’t need to keep the Excel files once they are imported.', 'Listene lagres bare på denne enheten. En sikkerhetskopi er én liten fil med alle månedene, valutamerket og Fredrik & Louisa-prisene dine. Du trenger ikke å beholde Excel-filene etter at de er importert.'],
+  'Последњи бекап: <b style="color:var(--text)">{a}</b>': ['Last export: <b style="color:var(--text)">{a}</b>', 'Siste sikkerhetskopi: <b style="color:var(--text)">{a}</b>'],
+  'Никад': ['Never', 'Aldri'],
+  'Сачувај бекап': ['Export backup', 'Eksporter sikkerhetskopi'],
+  'Врати из бекапа': ['Import backup', 'Importer sikkerhetskopi'],
+  'Језик': ['Language', 'Språk'],
+  /* брисање листе */
+  'Обрисати {a}?': ['Delete {a}?', 'Slette {a}?'],
+  'Листа за {a} ће бити обрисана. Апликација се враћа на {b} са свим подацима и трендовима. Остали месеци остају.': ['The {a} list will be removed. The app goes back to showing {b} with all its data and trends. Other months are not touched.', 'Listen for {a} blir slettet. Appen går tilbake til {b} med alle data og trender. Andre måneder berøres ikke.'],
+  'Ово ти је једина листа. Цене ће бити празне док не увезеш нову.': ['This is your only list. Prices will be empty until you import a new one.', 'Dette er den eneste listen din. Prisene er tomme til du importerer en ny.'],
+  'Листа за {a} ће бити обрисана. Остали месеци остају. {b} ће се поредити са: {c}.': ['The {a} list will be removed. Other months are kept. {b} will be compared with {c}.', 'Listen for {a} blir slettet. Andre måneder beholdes. {b} sammenlignes med {c}.'],
+  'ничим (постаје прва листа)': ['nothing (it becomes the first list)', 'ingenting (den blir den første listen)'],
+  'Обриши ову листу': ['Delete this list', 'Slett denne listen'],
+  'Листа за {a} је обрисана': ['{a} list deleted', 'Listen for {a} er slettet'],
+  /* увоз */
+  'Нова листа': ['New list', 'Ny liste'],
+  'Увоз ценовника': ['Import price list', 'Importer prisliste'],
+  'ЛИСТ': ['SHEET', 'ARK'],
+  'МЕСЕЦ ОВЕ ЛИСТЕ': ['MONTH OF THIS LIST', 'MÅNED FOR DENNE LISTEN'],
+  'КОЛОНА ПАРФЕМ': ['PERFUME COLUMN', 'PARFYMEKOLONNE'],
+  'КОЛОНА ЦЕНА': ['PRICE COLUMN', 'PRISKOLONNE'],
+  'Први ред је заглавље': ['First row is a header', 'Første rad er en overskrift'],
+  'Колона {a}': ['Column {a}', 'Kolonne {a}'],
+  'Није пронађен ниједан ред са називом парфема и ценом. Провери две колоне изнад.': ['No rows with a perfume name and a price were found. Check the two column choices above.', 'Fant ingen rader med parfymenavn og pris. Sjekk de to kolonnevalgene over.'],
+  'Увези': ['Import', 'Importer'],
+  'Пронађено парфема: <b>{a}</b>': ['Perfumes found: <b>{a}</b>', 'Parfymer funnet: <b>{a}</b>'],
+  'Пример:': ['Sample:', 'Eksempel:'],
+  'Прескочени редови: {a} (празни или без исправне цене)': ['Skipped rows: {a} (empty or no valid price)', 'Hoppet over rader: {a} (tomme eller uten gyldig pris)'],
+  'Поређено са <b>{a}</b>: ▲ {b} · ▼ {c} · исто {d} · нових {e} · уклоњено {f}': ['Compared with <b>{a}</b>: ▲ {b} · ▼ {c} · same {d} · new {e} · removed {f}', 'Sammenlignet med <b>{a}</b>: ▲ {b} · ▼ {c} · uendret {d} · nye {e} · fjernet {f}'],
+  'Просечна промена <b>{a}</b>': ['Average change <b>{a}</b>', 'Gjennomsnittlig endring <b>{a}</b>'],
+  'Ово ће бити твоја прва листа, па још нема трендова.': ['This will be your first list, so there are no trends yet.', 'Dette blir din første liste, så det finnes ingen trender ennå.'],
+  'Листа за {a} већ постоји. Увоз ће је заменити.': ['A list for {a} already exists. Importing will replace it.', 'Det finnes allerede en liste for {a}. Importen erstatter den.'],
+  'Замени {a}': ['Replace {a}', 'Erstatt {a}'],
+  'Увези {a}': ['Import {a}', 'Importer {a}'],
+  'Изабери месец': ['Pick a month', 'Velg en måned'],
+  'Увезено {a} за {b}': ['Imported {a} for {b}', 'Importerte {a} for {b}'],
+  'Excel читач се није учитао. Пробај CSV.': ['Excel reader didn’t load. Try CSV.', 'Excel-leseren ble ikke lastet. Prøv CSV.'],
+  'Фајл није могао да се прочита. Пробај .xlsx или CSV.': ['Couldn’t read that file. Try .xlsx or CSV.', 'Kunne ikke lese filen. Prøv .xlsx eller CSV.'],
+  /* брисање Excel фајла (само Андроид апликација) */
+  'Обрисати Excel фајл?': ['Delete the Excel file?', 'Slette Excel-filen?'],
+  'Све цене за {a} ({b}) сада су сачуване у апликацији, па <b style="color:var(--text)">{c}</b> више није потребан. Брисањем се уклања само фајл са телефона. Листа, трендови и бекап остају како јесу.': ['All {b} prices for {a} are now saved in the app, so <b style="color:var(--text)">{c}</b> is no longer needed. Deleting it removes only the file from your phone. The list, trends and your backup stay as they are.', 'Alle prisene for {a} ({b}) er nå lagret i appen, så <b style="color:var(--text)">{c}</b> trengs ikke lenger. Sletting fjerner bare filen fra telefonen. Listen, trendene og sikkerhetskopien blir som de er.'],
+  'Обриши фајл': ['Delete file', 'Slett filen'],
+  'Задржи фајл': ['Keep file', 'Behold filen'],
+  'Фајл је обрисан. Листа је сачувана.': ['File deleted. Your list is kept.', 'Filen er slettet. Listen er beholdt.'],
+  'Фајл није обрисан. Листа је сачувана.': ['Couldn’t delete the file. Your list is kept.', 'Kunne ikke slette filen. Listen er beholdt.'],
+  /* бекап */
+  'Бекап је сачуван': ['Backup exported', 'Sikkerhetskopi eksportert'],
+  'Ово није исправан бекап фајл': ['That isn’t a valid backup file', 'Dette er ikke en gyldig sikkerhetskopi'],
+  'Заменити листе?': ['Replace your lists?', 'Erstatte listene?'],
+  'Бекап има {a}{b}. Тренутни подаци ({c}) биће замењени.': ['The backup has {a}{b}. Your current data ({c}) will be replaced.', 'Sikkerhetskopien har {a}{b}. Nåværende data ({c}) blir erstattet.'],
+  ' и Fredrik & Louisa цене ({a})': [' and {a} Fredrik & Louisa prices', ' og {a} Fredrik & Louisa-priser'],
+  'Замени бекапом': ['Replace with backup', 'Erstatt med sikkerhetskopi'],
+  'Бекап је враћен': ['Backup imported', 'Sikkerhetskopi importert']
+};
+// Облици за број: српски [1, 2–4, 5+], енглески и норвешки [1, више].
+const PL = {
+  perf:  { sr:['парфем','парфема','парфема'], en:['perfume','perfumes'], no:['parfyme','parfymer'] },
+  list:  { sr:['листа','листе','листа'], en:['list','lists'], no:['liste','lister'] },
+  month: { sr:['месец','месеца','месеци'], en:['month','months'], no:['måned','måneder'] }
+};
+const MONTHS = {
+  sr:['јануар','фебруар','март','април','мај','јун','јул','август','септембар','октобар','новембар','децембар'],
+  en:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  no:['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
+};
+const MONTHS_SHORT = {
+  sr:['јан','феб','мар','апр','мај','јун','јул','авг','сеп','окт','нов','дец'],
+  en:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  no:['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des']
+};
+function defaultLang(){ return /^(nb|nn|no)\b/i.test(navigator.language || '') ? 'no' : 'sr'; }
+let curLang = (() => { try{ const l = localStorage.getItem(LANG_KEY); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return defaultLang(); })();
+const lang = () => curLang;
+const base = () => curLang==='en' || curLang==='no' ? curLang : 'sr';
+/** Преводи српски текст (кључ) на изабрани језик; {x} се замењује вредностима. */
+function t(s, v){
+  const l = base(); let r = s;
+  if(l!=='sr'){ const e = TR[s]; if(e) r = e[l==='en'?0:1]; }
+  if(v) r = r.replace(/\{(\w+)\}/g, (m,k) => v[k] ?? m);
+  return r;
+}
+const LAT = { а:'a',б:'b',в:'v',г:'g',д:'d',ђ:'đ',е:'e',ж:'ž',з:'z',и:'i',ј:'j',к:'k',л:'l',љ:'lj',м:'m',н:'n',њ:'nj',о:'o',п:'p',р:'r',с:'s',т:'t',ћ:'ć',у:'u',ф:'f',х:'h',ц:'c',ч:'č',џ:'dž',ш:'š',
+  А:'A',Б:'B',В:'V',Г:'G',Д:'D',Ђ:'Đ',Е:'E',Ж:'Ž',З:'Z',И:'I',Ј:'J',К:'K',Л:'L',Љ:'Lj',М:'M',Н:'N',Њ:'Nj',О:'O',П:'P',Р:'R',С:'S',Т:'T',Ћ:'Ć',У:'U',Ф:'F',Х:'H',Ц:'C',Ч:'Č',Џ:'Dž',Ш:'Š' };
+const toLat = s => String(s).replace(/[Ѐ-ӿ]/g, c => LAT[c] ?? c);
+// Латиница се добија пресловљавањем целог приказа.
+const L = s => curLang==='sr-lat' ? toLat(s) : s;
+/** Број са обликом речи, нпр. „3 парфема“, „5 lists“. */
+function PW(n, key){
+  const f = PL[key][base()], a = Math.abs(n);
+  return f[f.length===2 ? (a===1?0:1) : (a%10===1 && a%100!==11 ? 0 : a%10>=2 && a%10<=4 && (a%100<12 || a%100>14) ? 1 : 2)];
+}
+const P = (n, key) => fmtNum(n,0)+' '+PW(n,key);
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+let collator = new Intl.Collator(base()==='no'?'nb':base(), { sensitivity:'base', numeric:true });
+
+// Усред реченице месец иде малим словом (српски, норвешки); MT() је облик за наслове.
 function monthLabel(m, short){
-  const p = m.split('-').map(Number);
-  return new Date(Date.UTC(p[0],p[1]-1,1)).toLocaleDateString('en-US',{month:short?'short':'long',year:'numeric',timeZone:'UTC'});
+  const p = m.split('-').map(Number), l = base();
+  return (short?MONTHS_SHORT:MONTHS)[l][p[1]-1]+' '+p[0];
 }
+const MT = (m, short) => cap(monthLabel(m, short));
+function dateLabel(iso){
+  const d = new Date(iso), l = base(), m = MONTHS_SHORT[l][d.getMonth()];
+  if(l==='en') return m+' '+d.getDate()+', '+d.getFullYear();
+  return d.getDate()+'. '+m+' '+d.getFullYear()+(l==='sr'?'.':'');
+}
+/** Хиљаде и децимале по језику: 1.234,50 (српски), 1 234,50 (норвешки), 1,234.50 (енглески). */
+function fmtNum(n, dec){
+  const neg = n<0, l = base(); let [i,f] = Math.abs(n).toFixed(dec).split('.');
+  i = i.replace(/\B(?=(\d{3})+(?!\d))/g, l==='en'?',':l==='no'?' ':'.');
+  return (neg?'−':'')+i+(f?(l==='en'?'.':',')+f:'');
+}
+function fmtPrice(p, dec){ return fmtNum(Number(p), dec?2:0); }
+
 function curMonth(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function guessMonth(name){
   let m = String(name).match(/(20\d{2})[-_. ]?(0[1-9]|1[0-2])(?!\d)/);
@@ -231,7 +436,7 @@ function parsePrice(v){
   if(typeof v==='number') return Number.isFinite(v) ? v : null;
   if(v==null) return null;
   const raw = String(v).trim();
-  if(!/^(?:€|\$|£|eur|rsd|din|usd|kn|chf|km)?\s*-?\d[\d\s\u00a0.,]*\s*(?:€|\$|£|eur|rsd|din|usd|kn|chf|km|\.-)?$/i.test(raw)) return null;
+  if(!/^(?:€|\$|£|eur|rsd|din|usd|kn|chf|km)?\s*-?\d[\d\s .,]*\s*(?:€|\$|£|eur|rsd|din|usd|kn|chf|km|\.-)?$/i.test(raw)) return null;
   const s = raw.replace(/[^\d.,\-]/g,''); if(!/\d/.test(s)) return null;
   const hasC = s.includes(','), hasD = s.includes('.'); let t = s;
   if(hasC && hasD) t = s.lastIndexOf(',')>s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
@@ -239,9 +444,8 @@ function parsePrice(v){
   else if(hasD) t = /^-?\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g,'') : s;
   const n = Number(t); return Number.isFinite(n) ? n : null;
 }
-function fmtPrice(p, dec){ return Number(p).toLocaleString('en-US',{minimumFractionDigits:dec?2:0,maximumFractionDigits:dec?2:0}); }
 function csvParse(text){
-  text = text.replace(/^\uFEFF/,'');
+  text = text.replace(/^﻿/,'');
   const first = text.split(/\r?\n/).find(l=>l.trim()) || '';
   const cnt = c => first.split(c).length-1;
   const delim = cnt('\t')>=Math.max(cnt(';'),cnt(',')) && cnt('\t')>0 ? '\t' : cnt(';')>cnt(',') ? ';' : ',';
@@ -274,6 +478,7 @@ function loadData(){ try{ const d = normalizeData(JSON.parse(localStorage.getIte
 function loadFredData(){ try{ const d = JSON.parse(localStorage.getItem(FRED_KEY)); if(d && typeof d==='object') return new Map(Object.entries(d)); }catch(e){} return new Map(); }
 let data = loadData();
 let fredPrices = loadFredData();
+let lastBackup = (() => { try{ return localStorage.getItem(BACKUP_KEY) || null; }catch(e){ return null; } })();
 function persistFred(){
   try{
     const obj = {}; fredPrices.forEach((v,k)=>{ obj[k]=v; });
@@ -295,7 +500,7 @@ function persist(){
   try{
     localStorage.setItem(KEY, JSON.stringify({ currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})) }));
     return true;
-  }catch(e){ toast("Couldn't save. Export a backup now."); return false; }
+  }catch(e){ toast(t('Чување није успело. Сачувај бекап одмах.')); return false; }
 }
 buildCache();
 
@@ -317,9 +522,9 @@ function compareKeyed(prevPairs, curPairs){
 const pairsOf = l => l.items.map((x,i)=>[l.k[i],x[1]]);
 
 function buildView(){
-  const L = data.lists; if(!L.length){ view = null; return; }
-  let k = L.findIndex(l=>l.month===ui.month); if(k<0){ k = L.length-1; ui.month = L[k].month; }
-  const cur = L[k], prev = k>0 ? L[k-1] : null;
+  const Ls = data.lists; if(!Ls.length){ view = null; return; }
+  let k = Ls.findIndex(l=>l.month===ui.month); if(k<0){ k = Ls.length-1; ui.month = Ls[k].month; }
+  const cur = Ls[k], prev = k>0 ? Ls[k-1] : null;
   const pm = new Map(); if(prev) prev.items.forEach((x,i)=>pm.set(prev.k[i],x[1]));
   const rows = [], seen = new Set(), cnt = { up:0, down:0, same:0, new:0, removed:0 }; let sum = 0, n = 0;
   cur.items.forEach((x,i) => {
@@ -340,11 +545,11 @@ function buildView(){
 }
 function computeResults(){
   if(!view){ results = []; return; }
-  let base = ui.filter==='removed' ? view.removed : view.rows;
-  if(['up','down','same','new'].includes(ui.filter)) base = base.filter(r=>r.st===ui.filter);
+  let pool = ui.filter==='removed' ? view.removed : view.rows;
+  if(['up','down','same','new'].includes(ui.filter)) pool = pool.filter(r=>r.st===ui.filter);
   const toks = norm(ui.q).split(' ').filter(Boolean);
-  if(toks.length) base = base.filter(r=>toks.every(t=>r.key.includes(t)));
-  const arr = base.slice(), pr = r => r.price==null ? r.prev : r.price;
+  if(toks.length) pool = pool.filter(r=>toks.every(w=>r.key.includes(w)));
+  const arr = pool.slice(), pr = r => r.price==null ? r.prev : r.price;
   if(ui.sort==='name') arr.sort((a,b)=>collator.compare(a.name,b.name));
   else if(ui.sort==='low') arr.sort((a,b)=>pr(a)-pr(b)||collator.compare(a.name,b.name));
   else if(ui.sort==='high') arr.sort((a,b)=>pr(b)-pr(a)||collator.compare(a.name,b.name));
@@ -355,17 +560,17 @@ function computeResults(){
 
 /* ============ ui plumbing ============ */
 let toastT;
-function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'),2400); }
+function toast(msg){ const el = $('toast'); el.textContent = L(msg); el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('on'),2400); }
 function openSheet(html, mount){
   const root = $('sheetRoot');
-  root.innerHTML = '<div class="backdrop" data-a="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div>';
+  root.innerHTML = L('<div class="backdrop" data-a="closeSheet"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div>');
   root.classList.add('open'); document.body.classList.add('noscroll');
   if(mount) mount(root.querySelector('.sheet'));
 }
 function closeSheet(){ const r = $('sheetRoot'); r.classList.remove('open'); r.innerHTML=''; document.body.classList.remove('noscroll'); }
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSheet(); });
 function confirmSheet(title, text, label, onYes){
-  openSheet('<h2>'+esc(title)+'</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 18px">'+esc(text)+'</p><button class="btn danger" id="cfYes" style="margin-top:0">'+esc(label)+'</button><button class="btn sec" data-a="closeSheet">Cancel</button>',
+  openSheet('<h2>'+esc(title)+'</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 18px">'+esc(text)+'</p><button class="btn danger" id="cfYes" style="margin-top:0">'+esc(label)+'</button><button class="btn sec" data-a="closeSheet">'+t('Откажи')+'</button>',
     s => s.querySelector('#cfYes').addEventListener('click',()=>{ closeSheet(); onYes(); }));
 }
 function setTab(t){
@@ -377,21 +582,39 @@ function setTab(t){
 const cur$ = () => data.currency ? ' <small>'+esc(data.currency)+'</small>' : '';
 const priceStr = (p,dec) => fmtPrice(p,dec)+cur$();
 const sgnPrice = (c,dec) => (c>0?'+':'−')+fmtPrice(Math.abs(c),dec);
-const sgnPct = p => (p>0?'+':p<0?'−':'')+Math.abs(p).toFixed(1)+'%';
+const sgnPct = p => (p>0?'+':p<0?'−':'')+fmtNum(Math.abs(p),1)+'%';
 function hl(text){
-  const t = ui.q.trim(); if(!t) return esc(text);
-  const parts = t.split(/\s+/).filter(Boolean).map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const q = ui.q.trim(); if(!q) return esc(text);
+  const parts = q.split(/\s+/).filter(Boolean).map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
   const re = new RegExp('('+parts.join('|')+')','gi');
   return text.split(re).map((seg,i)=>i%2?'<mark>'+esc(seg)+'</mark>':esc(seg)).join('');
+}
+/** Текстови ван динамичких делова: наслов, мени, претрага. */
+function renderChrome(){
+  document.documentElement.lang = base()==='no' ? 'nb' : base();
+  document.title = L(t('Ценовник парфема'));
+  $('brand').innerHTML = L(t('Ценовник <i>парфема</i>'));
+  $('brandTag').textContent = L(t('Месечни преглед'));
+  $('navPrices').textContent = L(t('Цене'));
+  $('navLists').textContent = L(t('Листе'));
+  $('nav').setAttribute('aria-label', L(t('Главни мени')));
+  $('q').placeholder = L(t('Претражи парфем или бренд'));
+  $('qClear').setAttribute('aria-label', L(t('Обриши претрагу')));
+}
+function setLang(l){
+  curLang = l; try{ localStorage.setItem(LANG_KEY, l); }catch(e){}
+  collator = new Intl.Collator(base()==='no'?'nb':base(), { sensitivity:'base', numeric:true });
+  renderChrome(); render();
 }
 
 /* ============ PRICES tab ============ */
 function trendHtml(r, dec){
-  if(r.st==='up') return '<span class="tr up">▲ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
-  if(r.st==='down') return '<span class="tr down">▼ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
-  if(r.st==='same') return '<span class="tr same">● unchanged</span><span class="was">was '+fmtPrice(r.prev,dec)+'</span>';
-  if(r.st==='new') return '<span class="tr new">NEW</span>';
-  if(r.st==='removed') return '<span class="tr rem">Not in this list</span><span class="was">last price '+fmtPrice(r.prev,dec)+'</span>';
+  const was = '<span class="was">'+t('било {a}',{a:fmtPrice(r.prev,dec)})+'</span>';
+  if(r.st==='up') return '<span class="tr up">▲ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span>'+was;
+  if(r.st==='down') return '<span class="tr down">▼ '+sgnPrice(r.ch,dec)+' <i>'+sgnPct(r.pct)+'</i></span>'+was;
+  if(r.st==='same') return '<span class="tr same">'+t('● без промене')+'</span>'+was;
+  if(r.st==='new') return '<span class="tr new">'+t('НОВО')+'</span>';
+  if(r.st==='removed') return '<span class="tr rem">'+t('Нема у овој листи')+'</span><span class="was">'+t('последња цена {a}',{a:fmtPrice(r.prev,dec)})+'</span>';
   return '';
 }
 function sparkHtml(r){
@@ -404,66 +627,73 @@ function sparkHtml(r){
   const up = last[last.length-1]-last[0], c = up>0?'var(--up)':up<0?'var(--down)':'var(--muted)';
   return '<svg class="spark" viewBox="0 0 60 18" preserveAspectRatio="none"><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
+function backupBanner(){
+  if(!data.lists.length) return '';
+  const last = lastBackup ? new Date(lastBackup).getTime() : 0;
+  if(last && Date.now()-last < 14*864e5) return '';
+  return '<div class="banner"><span>'+(last?t('Последњи бекап је старији од 2 недеље.'):t('Твоје листе постоје само на овом уређају.'))+' '+t('Сачувај бекап да их не изгубиш.')+'</span><button data-a="export">'+t('Извези')+'</button></div>';
+}
 function renderHead(){
   const head = $('pHead'), tool = $('pTool');
   const has = !!view;
   $('searchBar').style.display = has ? '' : 'none';
   if(!has){ head.innerHTML = ''; tool.innerHTML = ''; return; }
-  const v = view, L = data.lists;
+  const v = view, Ls = data.lists;
   let h = '';
-  if(L.length>1){
-    h += '<div class="chips months">'+L.slice().reverse().map(l=>'<button class="chip '+(l.month===v.cur.month?'on':'')+'" data-a="month" data-v="'+l.month+'">'+monthLabel(l.month,true)+'</button>').join('')+'</div>';
+  if(Ls.length>1){
+    h += '<div class="chips months">'+Ls.slice().reverse().map(l=>'<button class="chip '+(l.month===v.cur.month?'on':'')+'" data-a="month" data-v="'+l.month+'">'+MT(l.month,true)+'</button>').join('')+'</div>';
   }
-  h += '<section class="hero"><div class="eyebrow">Price list</div><h1 class="month">'+monthLabel(v.cur.month)+'</h1><div class="meta"><b>'+v.rows.length.toLocaleString('en-US')+'</b> perfumes'+
-    (v.prev ? ' · compared with <b>'+monthLabel(v.prev.month)+'</b>' : ' · import next month’s list to see price trends')+'</div>'+
-    (v.avg!=null ? '<div class="meta">Prices moved <b style="color:var(--'+(v.avg>0?'up':v.avg<0?'down':'muted')+')">'+sgnPct(v.avg)+'</b> on average</div>' : '')+'</section>';
+  h += backupBanner();
+  const avgC = v.avg>0?'up':v.avg<0?'down':'muted';
+  h += '<section class="hero"><div class="eyebrow">'+t('Ценовник')+'</div><h1 class="month">'+MT(v.cur.month)+'</h1><div class="meta">'+'<b>'+fmtNum(v.rows.length,0)+'</b> '+PW(v.rows.length,'perf')+
+    (v.prev ? t(' · поређено са <b>{a}</b>',{a:monthLabel(v.prev.month)}) : t(' · увези листу за следећи месец да видиш кретање цена'))+'</div>'+
+    (v.avg!=null ? '<div class="meta">'+t('Просечна промена цена: {a}',{a:'<b style="color:var(--'+avgC+')">'+sgnPct(v.avg)+'</b>'})+'</div>' : '')+'</section>';
   if(v.prev){
-    const c = v.cnt, chip = (f,label,n,klass,icon) => (n>0||ui.filter===f||f==='all') ? '<button class="chip '+klass+' '+(ui.filter===f?'on':'')+'" data-a="filter" data-v="'+f+'">'+(icon?'<i>'+icon+'</i>':'')+label+' <b>'+n.toLocaleString('en-US')+'</b></button>' : '';
-    h += '<div class="chips">'+chip('all','All',v.rows.length,'','')+chip('up','Up',c.up,'up','▲')+chip('down','Down',c.down,'down','▼')+chip('same','Same',c.same,'','')+chip('new','New',c.new,'new','')+chip('removed','Removed',c.removed,'','')+'</div>';
+    const c = v.cnt, chip = (f,label,n,klass,icon) => (n>0||ui.filter===f||f==='all') ? '<button class="chip '+klass+' '+(ui.filter===f?'on':'')+'" data-a="filter" data-v="'+f+'">'+(icon?'<i>'+icon+'</i>':'')+label+' <b>'+fmtNum(n,0)+'</b></button>' : '';
+    h += '<div class="chips">'+chip('all',t('Све'),v.rows.length,'','')+chip('up',t('Поскупело'),c.up,'up','▲')+chip('down',t('Појефтинило'),c.down,'down','▼')+chip('same',t('Исто'),c.same,'','')+chip('new',t('Ново'),c.new,'new','')+chip('removed',t('Уклоњено'),c.removed,'','')+'</div>';
   }
-  head.innerHTML = h;
+  head.innerHTML = L(h);
 }
 function renderTool(){
   if(!view){ $('pTool').innerHTML = ''; return; }
   const opt = (v,l) => '<option value="'+v+'"'+(ui.sort===v?' selected':'')+'>'+l+'</option>';
-  $('pTool').innerHTML = '<div class="toolbar"><div class="count" id="countTxt"></div><select class="sortsel" id="sortSel" aria-label="Sort">'+
-    opt('name','Name A–Z')+opt('low','Price: low to high')+opt('high','Price: high to low')+(view.prev?opt('rise','Biggest increase')+opt('drop','Biggest drop'):'')+'</select></div>';
+  $('pTool').innerHTML = L('<div class="toolbar"><div class="count" id="countTxt"></div><select class="sortsel" id="sortSel" aria-label="'+t('Сортирање')+'">'+
+    opt('name',t('Назив А–Ш'))+opt('low',t('Цена: од најниже'))+opt('high',t('Цена: од највише'))+(view.prev?opt('rise',t('Највеће поскупљење'))+opt('drop',t('Највеће појефтињење')):'')+'</select></div>');
 }
 function renderList(){
   const box = $('pList');
   if(!view){
-    box.innerHTML = '<div class="card empty" style="margin-top:22px"><h3>No price list yet</h3><p>Import your monthly Excel or CSV file with two columns: perfume and price. Import a new one each month and price trends appear here.</p><button class="btn" data-a="pickList">Import price list</button></div>';
+    box.innerHTML = L('<div class="card empty" style="margin-top:22px"><h3>'+t('Још нема ценовника')+'</h3><p>'+t('Увези месечни Excel или CSV фајл са две колоне: парфем и цена. Сваког месеца увези нови и овде ће се видети кретање цена.')+'</p><button class="btn" data-a="pickList">'+t('Увези ценовник')+'</button></div>');
     return;
   }
   computeResults();
-  const ct = $('countTxt'); if(ct) ct.textContent = results.length.toLocaleString('en-US')+(results.length===1?' perfume':' perfumes');
+  const ct = $('countTxt'); if(ct) ct.textContent = L(P(results.length,'perf'));
   if(!results.length){
-    box.innerHTML = '<div class="list"><div class="empty"><h3>Nothing found</h3>'+(ui.q?'No perfume matches “'+esc(ui.q)+'”.':'No perfumes in this filter.')+'</div></div>';
+    box.innerHTML = L('<div class="list"><div class="empty"><h3>'+t('Нема резултата')+'</h3>'+(ui.q?t('Ниједан парфем не одговара „{a}“.',{a:esc(ui.q)}):t('Нема парфема у овом филтеру.'))+'</div></div>');
     return;
   }
   const dec = view.dec, shown = results.slice(0,ui.limit);
   let h = '<div class="list">';
   shown.forEach((r,i) => {
     const p = r.price!=null ? r.price : r.prev;
-    
+
     // Fredrik & Louisa price badge for list items
     const fredVal = fredPrices.get(r.key);
     let fredBadge = '';
     if(fredVal !== undefined && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0 && p != null) {
       const fPrice = Number(fredVal);
-      const diffPct = round2(((fPrice - p) / fPrice) * 100);
+      const diffPct = Math.abs(round2(((fPrice - p) / fPrice) * 100));
       const isCheaper = p < fPrice;
       const badgeColor = isCheaper ? 'color:var(--down);background:var(--down-soft)' : 'color:var(--up);background:var(--up-soft)';
-      const desc = isCheaper ? 'cheaper' : 'expensive';
-      fredBadge = '<span class="tr" style="'+badgeColor+'">F&L ' + fmtPrice(fPrice, 2) + ' € (' + Math.abs(diffPct) + '% ' + desc + ')</span>';
+      fredBadge = '<span class="tr" style="'+badgeColor+'">F&L ' + fmtPrice(fPrice, 2) + ' € (' + t(isCheaper?'{a}% јефтиније':'{a}% скупље',{a:fmtNum(diffPct,1)}) + ')</span>';
     }
 
     h += '<button class="row" data-a="open" data-i="'+i+'"><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+fredBadge+'</div></div>'+
       '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+sparkHtml(r)+'</div></button>';
   });
   h += '</div>';
-  if(results.length>shown.length) h += '<button class="btn sec more" data-a="more">Show '+Math.min(50,results.length-shown.length)+' more · '+(results.length-shown.length).toLocaleString('en-US')+' left</button>';
-  box.innerHTML = h;
+  if(results.length>shown.length) h += '<button class="btn sec more" data-a="more">'+t('Прикажи још {a} · остало {b}',{a:Math.min(50,results.length-shown.length),b:fmtNum(results.length-shown.length,0)})+'</button>';
+  box.innerHTML = L(h);
 }
 
 /* ---- detail sheet ---- */
@@ -480,49 +710,48 @@ function chartSvg(series, N){
     if(last || i===0 || s.p===min || s.p===max) g += '<text x="'+X(s.j).toFixed(1)+'" y="'+(Y(s.p)-9).toFixed(1)+'" text-anchor="'+(i===0&&series.length>1?'start':last&&series.length>1?'end':'middle')+'" font-size="10.5" font-weight="700" fill="var(--muted)">'+fmtPrice(s.p,dec)+'</text>';
   });
   const first = data.lists[0].month, lastM = data.lists[N-1].month;
-  g += '<text x="'+pl+'" y="'+(H-4)+'" font-size="10" font-weight="700" fill="var(--muted)">'+monthLabel(first,true)+'</text>';
-  if(N>1) g += '<text x="'+(W-pr)+'" y="'+(H-4)+'" text-anchor="end" font-size="10" font-weight="700" fill="var(--muted)">'+monthLabel(lastM,true)+'</text>';
+  g += '<text x="'+pl+'" y="'+(H-4)+'" font-size="10" font-weight="700" fill="var(--muted)">'+MT(first,true)+'</text>';
+  if(N>1) g += '<text x="'+(W-pr)+'" y="'+(H-4)+'" text-anchor="end" font-size="10" font-weight="700" fill="var(--muted)">'+MT(lastM,true)+'</text>';
   return '<svg class="chart" viewBox="0 0 '+W+' '+H+'">'+g+'</svg>';
 }
 function openDetail(r){
-  const m = hist.get(r.key) || new Map(), L = data.lists, dec = view.dec;
-  const series = []; L.forEach((l,j)=>{ if(m.has(l.month)) series.push({ j, month:l.month, p:m.get(l.month) }); });
+  const m = hist.get(r.key) || new Map(), Ls = data.lists, dec = view.dec;
+  const series = []; Ls.forEach((l,j)=>{ if(m.has(l.month)) series.push({ j, month:l.month, p:m.get(l.month) }); });
   const prices = series.map(s=>s.p);
   const lo = series.reduce((a,b)=>b.p<a.p?b:a), hi = series.reduce((a,b)=>b.p>a.p?b:a);
   const avg = prices.reduce((a,b)=>a+b,0)/prices.length;
   let rowsH = '';
-  for(let i=L.length-1;i>=0;i--){
-    const l = L[i], p = m.get(l.month);
-    let prevP = null; for(let j=i-1;j>=0;j--){ if(m.has(L[j].month)){ prevP = m.get(L[j].month); break; } }
+  for(let i=Ls.length-1;i>=0;i--){
+    const l = Ls[i], p = m.get(l.month);
+    let prevP = null; for(let j=i-1;j>=0;j--){ if(m.has(Ls[j].month)){ prevP = m.get(Ls[j].month); break; } }
     let ch = '<span class="was">—</span>';
-    if(p!=null && prevP!=null){ const c = round2(p-prevP); ch = c===0 ? '<span class="was">unchanged</span>' : '<span style="color:var(--'+(c>0?'up':'down')+')">'+(c>0?'▲ ':'▼ ')+sgnPrice(c,dec)+' ('+sgnPct(c/prevP*100)+')</span>'; }
-    else if(p!=null && prevP==null && i>0) ch = '<span style="color:var(--new)">back / new</span>';
-    rowsH += '<tr><td>'+monthLabel(l.month)+'</td><td>'+(p!=null?priceStr(p,dec):'<span class="was">not listed</span>')+'</td><td>'+ch+'</td></tr>';
+    if(p!=null && prevP!=null){ const c = round2(p-prevP); ch = c===0 ? '<span class="was">'+t('без промене')+'</span>' : '<span style="color:var(--'+(c>0?'up':'down')+')">'+(c>0?'▲ ':'▼ ')+sgnPrice(c,dec)+' ('+sgnPct(c/prevP*100)+')</span>'; }
+    else if(p!=null && prevP==null && i>0) ch = '<span style="color:var(--new)">'+t('поново / ново')+'</span>';
+    rowsH += '<tr><td>'+MT(l.month)+'</td><td>'+(p!=null?priceStr(p,dec):'<span class="was">'+t('нема у листи')+'</span>')+'</td><td>'+ch+'</td></tr>';
   }
   const name = names.get(r.key) || r.name;
   const curP = r.price;
-  
+
   // Fredrik & Louisa calculation logic (in EUR)
   const fredVal = fredPrices.get(r.key) || '';
   let compHtml = '';
   if(curP != null && fredVal !== '' && !isNaN(fredVal) && Number(fredVal) > 0) {
     const fPrice = Number(fredVal);
-    const diffPct = round2(((fPrice - curP) / fPrice) * 100);
+    const diffPct = Math.abs(round2(((fPrice - curP) / fPrice) * 100));
     const isCheaper = curP < fPrice;
     const colorStyle = isCheaper ? 'color:var(--down)' : 'color:var(--up)';
-    const textDesc = isCheaper ? 'cheaper in price list' : 'more expensive in price list';
-    compHtml = '<div class="note" style="border: 1px dashed var(--gold); background:var(--surface2);">Fredrik & Louisa (EUR): <b>' + fmtPrice(fPrice, 2) + ' €</b><br><span style="' + colorStyle + '; font-weight:800;">Price list is ' + Math.abs(diffPct) + '% ' + textDesc + '</span></div>';
+    compHtml = '<div class="note" style="border: 1px dashed var(--gold); background:var(--surface2);">Fredrik & Louisa (EUR): <b>' + fmtPrice(fPrice, 2) + ' €</b><br><span style="' + colorStyle + '; font-weight:800;">' + t(isCheaper?'Ценовник је {a}% јефтинији':'Ценовник је {a}% скупљи',{a:fmtNum(diffPct,1)}) + '</span></div>';
   }
 
-  openSheet('<div class="eyebrow">'+monthLabel(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
-    (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">Not in the '+monthLabel(view.cur.month)+' list. Last known price: <b>'+fmtPrice(r.prev,dec)+'</b>.</div>')+
-    '<div style="margin-top:14px;"><label class="lbl" for="fredInput">FREDRIK & LOUISA PRICE (IN EUROS)</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="e.g. 129.9" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">Save</button></div></div>'+
+  openSheet('<div class="eyebrow">'+MT(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
+    (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div><div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">'+t('Нема у листи за {a}. Последња позната цена: <b>{b}</b>.',{a:monthLabel(view.cur.month),b:fmtPrice(r.prev,dec)})+'</div>')+
+    '<div style="margin-top:14px;"><label class="lbl" for="fredInput">'+t('ЦЕНА FREDRIK & LOUISA (У ЕВРИМА)')+'</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="'+t('нпр. 129.9')+'" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">'+t('Сачувај')+'</button></div></div>'+
     compHtml+
-    (series.length>=1 ? chartSvg(series, L.length) : '')+
-    '<div class="grid3"><div class="tile"><div class="k">Lowest</div><div class="v">'+fmtPrice(lo.p,dec)+'</div><div class="s">'+monthLabel(lo.month,true)+'</div></div>'+
-    '<div class="tile"><div class="k">Highest</div><div class="v">'+fmtPrice(hi.p,dec)+'</div><div class="s">'+monthLabel(hi.month,true)+'</div></div>'+
-    '<div class="tile"><div class="k">Average</div><div class="v">'+fmtPrice(avg,dec)+'</div><div class="s">'+series.length+(series.length===1?' month':' months')+'</div></div></div>'+
-    '<table class="htab">'+rowsH+'</table><button class="btn sec" data-a="closeSheet">Close</button>',
+    (series.length>=1 ? chartSvg(series, Ls.length) : '')+
+    '<div class="grid3"><div class="tile"><div class="k">'+t('Најнижа')+'</div><div class="v">'+fmtPrice(lo.p,dec)+'</div><div class="s">'+MT(lo.month,true)+'</div></div>'+
+    '<div class="tile"><div class="k">'+t('Највиша')+'</div><div class="v">'+fmtPrice(hi.p,dec)+'</div><div class="s">'+MT(hi.month,true)+'</div></div>'+
+    '<div class="tile"><div class="k">'+t('Просек')+'</div><div class="v">'+fmtPrice(avg,dec)+'</div><div class="s">'+P(series.length,'month')+'</div></div></div>'+
+    '<table class="htab">'+rowsH+'</table><button class="btn sec" data-a="closeSheet">'+t('Затвори')+'</button>',
     sheetEl => {
       sheetEl.querySelector('#fredSave').addEventListener('click', () => {
         const val = sheetEl.querySelector('#fredInput').value.trim();
@@ -532,7 +761,7 @@ function openDetail(r){
           fredPrices.set(r.key, Number(val));
         }
         persistFred();
-        toast('Fredrik price saved');
+        toast(t('Fredrik цена је сачувана'));
         openDetail(r);
         renderList();
       });
@@ -542,35 +771,37 @@ function openDetail(r){
 
 /* ============ LISTS tab ============ */
 function renderLists(){
-  const el = $('tab-lists'), L = data.lists;
-  let h = '<h1 class="page-title">Price lists</h1>';
-  h += '<div class="card" style="margin-top:0"><h3>Import a new list</h3><p>Excel (.xlsx, .xls) or CSV with two columns: perfume and price. Each month you import becomes its own list, and prices are compared with the month before.</p><button class="btn" data-a="pickList">Choose file</button></div>';
-  if(L.length){
-    h += '<div class="sec-head"><h2>Your lists</h2><span>Newest first</span></div>';
-    for(let i=L.length-1;i>=0;i--){
-      const l = L[i], prev = i>0 ? L[i-1] : null;
+  const el = $('tab-lists'), Ls = data.lists;
+  let h = '<h1 class="page-title">'+t('Ценовници')+'</h1>';
+  h += '<div class="card" style="margin-top:0"><h3>'+t('Увези нову листу')+'</h3><p>'+t('Excel (.xlsx, .xls) или CSV са две колоне: парфем и цена. Сваки увезени месец постаје посебна листа, а цене се пореде са претходним месецом.')+'</p><button class="btn" data-a="pickList">'+t('Изабери фајл')+'</button></div>';
+  if(Ls.length){
+    h += '<div class="sec-head"><h2>'+t('Твоје листе')+'</h2><span>'+t('Најновије прво')+'</span></div>';
+    for(let i=Ls.length-1;i>=0;i--){
+      const l = Ls[i], prev = i>0 ? Ls[i-1] : null;
       let cmp = '';
-      if(prev){ const c = compareKeyed(pairsOf(prev), pairsOf(l)); cmp = '<br>vs '+monthLabel(prev.month,true)+': ▲ '+c.up+' · ▼ '+c.down+' · new '+c.new+' · removed '+c.removed+(c.avg!=null?' · avg '+sgnPct(c.avg):''); }
-      const when = l.at ? new Date(l.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-      h += '<div class="card lrow"><div class="t">'+monthLabel(l.month)+'</div><div class="m">'+l.items.length.toLocaleString('en-US')+' perfumes'+(l.file?' · '+esc(l.file):'')+(when?' · imported '+when:'')+cmp+'</div>'+
-        '<div class="btns"><button class="btn sec sm" data-a="viewList" data-v="'+l.month+'">View</button><button class="btn danger sm" data-a="delList" data-v="'+l.month+'">Delete</button></div></div>';
+      if(prev){ const c = compareKeyed(pairsOf(prev), pairsOf(l)); cmp = '<br>'+t('у односу на {a}: ▲ {b} · ▼ {c} · нових {d} · уклоњено {e}',{a:monthLabel(prev.month,true),b:c.up,c:c.down,d:c.new,e:c.removed})+(c.avg!=null?t(' · просек {a}',{a:sgnPct(c.avg)}):''); }
+      const when = l.at ? dateLabel(l.at) : '';
+      h += '<div class="card lrow"><div class="t">'+MT(l.month)+'</div><div class="m">'+P(l.items.length,'perf')+(l.file?' · '+esc(l.file):'')+(when?' · '+t('увезено {a}',{a:when}):'')+cmp+'</div>'+
+        '<div class="btns"><button class="btn sec sm" data-a="viewList" data-v="'+l.month+'">'+t('Прикажи')+'</button><button class="btn danger sm" data-a="delList" data-v="'+l.month+'">'+t('Обриши')+'</button></div></div>';
     }
   }
-  h += '<div class="card"><h3>Currency label</h3><p>Optional. Shown next to prices, for example RSD or €.</p><input class="field" id="curInput" maxlength="8" placeholder="e.g. RSD" value="'+esc(data.currency)+'" style="margin-top:12px"></div>';
-  h += '<div class="card"><h3>Backup</h3><p>Your lists are stored in this browser only. Export a backup now and then, or to move to another device.</p><button class="btn" data-a="export">Export backup</button><button class="btn sec" data-a="importBackup">Import backup</button></div>';
-  el.innerHTML = h;
+  h += '<div class="card"><h3>'+t('Ознака валуте')+'</h3><p>'+t('Није обавезно. Приказује се поред цена, нпр. RSD или €.')+'</p><input class="field" id="curInput" maxlength="8" placeholder="'+t('нпр. RSD')+'" value="'+esc(data.currency)+'" style="margin-top:12px"></div>';
+  h += '<div class="card"><h3>'+t('Бекап')+'</h3><p>'+t('Листе се чувају само на овом уређају. Бекап је један мали фајл са свим месецима, ознаком валуте и твојим Fredrik & Louisa ценама. Excel фајлове не мораш да чуваш кад их увезеш.')+'</p>'+
+    '<p style="margin-top:8px">'+t('Последњи бекап: <b style="color:var(--text)">{a}</b>',{a:lastBackup?dateLabel(lastBackup):t('Никад')})+'</p><button class="btn" data-a="export">'+t('Сачувај бекап')+'</button><button class="btn sec" data-a="importBackup">'+t('Врати из бекапа')+'</button></div>';
+  h += '<div class="card"><h3>🌍 '+t('Језик')+'</h3><div class="langs">'+LANGS.map(([v,l])=>'<button class="chip '+(lang()===v?'on':'')+'" data-a="lang" data-v="'+v+'">'+l+'</button>').join('')+'</div></div>';
+  el.innerHTML = L(h);
 }
 function askDelete(month){
-  const L = data.lists, k = L.findIndex(l=>l.month===month); if(k<0) return;
-  const label = monthLabel(month), prev = k>0 ? L[k-1] : null, next = k<L.length-1 ? L[k+1] : null;
+  const Ls = data.lists, k = Ls.findIndex(l=>l.month===month); if(k<0) return;
+  const label = monthLabel(month), prev = k>0 ? Ls[k-1] : null, next = k<Ls.length-1 ? Ls[k+1] : null;
   let text;
-  if(!next && prev) text = 'The '+label+' list will be removed. The app goes back to showing '+monthLabel(prev.month)+' with all its data and trends. Other months are not touched.';
-  else if(!next && !prev) text = 'This is your only list. Prices will be empty until you import a new one.';
-  else text = 'The '+label+' list will be removed. Other months are kept. '+monthLabel(next.month)+' will be compared with '+(prev?monthLabel(prev.month):'nothing (it becomes the first list)')+'.';
-  confirmSheet('Delete '+label+'?', text, 'Delete this list', () => {
-    data.lists = L.filter(l=>l.month!==month);
+  if(!next && prev) text = t('Листа за {a} ће бити обрисана. Апликација се враћа на {b} са свим подацима и трендовима. Остали месеци остају.',{a:label,b:monthLabel(prev.month)});
+  else if(!next && !prev) text = t('Ово ти је једина листа. Цене ће бити празне док не увезеш нову.');
+  else text = t('Листа за {a} ће бити обрисана. Остали месеци остају. {b} ће се поредити са: {c}.',{a:label,b:MT(next.month),c:prev?monthLabel(prev.month):t('ничим (постаје прва листа)')});
+  confirmSheet(t('Обрисати {a}?',{a:label}), text, t('Обриши ову листу'), () => {
+    data.lists = Ls.filter(l=>l.month!==month);
     if(ui.month===month){ const pick = prev || next; ui.month = pick ? pick.month : null; }
-    buildCache(); persist(); render(); toast(label+' list deleted');
+    buildCache(); persist(); render(); toast(t('Листа за {a} је обрисана',{a:label}));
   });
 }
 
@@ -608,86 +839,109 @@ function openImport(fileName, src){
     const d = detectCols(rows); hdr = d.hdr; nameCol = d.name; priceCol = d.price; ncols = d.n;
   };
   loadRows();
-  openSheet('<div class="eyebrow">New list</div><h2>Import price list</h2><div class="note" style="margin-top:10px" id="imFile"></div>'+
-    (src.names.length>1 ? '<label class="lbl" for="imSheet">SHEET</label><select class="field" id="imSheet">'+src.names.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>' : '')+
-    '<label class="lbl" for="imMonth">MONTH OF THIS LIST</label><input class="field" type="month" id="imMonth">'+
-    '<div class="two"><div><label class="lbl" for="imName">PERFUME COLUMN</label><select class="field" id="imName"></select></div><div><label class="lbl" for="imPrice">PRICE COLUMN</label><select class="field" id="imPrice"></select></div></div>'+
-    '<label class="chk"><input type="checkbox" id="imHdr"> First row is a header</label><div id="imPrev"></div>',
+  openSheet('<div class="eyebrow">'+t('Нова листа')+'</div><h2>'+t('Увоз ценовника')+'</h2><div class="note" style="margin-top:10px" id="imFile"></div>'+
+    (src.names.length>1 ? '<label class="lbl" for="imSheet">'+t('ЛИСТ')+'</label><select class="field" id="imSheet">'+src.names.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select>' : '')+
+    '<label class="lbl" for="imMonth">'+t('МЕСЕЦ ОВЕ ЛИСТЕ')+'</label><input class="field" type="month" id="imMonth">'+
+    '<div class="two"><div><label class="lbl" for="imName">'+t('КОЛОНА ПАРФЕМ')+'</label><select class="field" id="imName"></select></div><div><label class="lbl" for="imPrice">'+t('КОЛОНА ЦЕНА')+'</label><select class="field" id="imPrice"></select></div></div>'+
+    '<label class="chk"><input type="checkbox" id="imHdr"> '+t('Први ред је заглавље')+'</label><div id="imPrev"></div>',
   s => {
     const q = x => s.querySelector(x);
-    q('#imFile').innerHTML = '<b>'+esc(fileName)+'</b>';
+    q('#imFile').innerHTML = L('<b>'+esc(fileName)+'</b>');
     q('#imMonth').value = month;
     function cols(){
-      const lab = c => (hdr && rows[0] && String(rows[0][c]??'').trim()!=='') ? String(rows[0][c]).slice(0,28) : 'Column '+colLetter(c);
+      const lab = c => (hdr && rows[0] && String(rows[0][c]??'').trim()!=='') ? String(rows[0][c]).slice(0,28) : t('Колона {a}',{a:colLetter(c)});
       const o = sel => Array.from({length:ncols},(_,c)=>'<option value="'+c+'"'+(c===sel?' selected':'')+'>'+esc(lab(c))+'</option>').join('');
-      q('#imName').innerHTML = o(nameCol); q('#imPrice').innerHTML = o(priceCol); q('#imHdr').checked = hdr;
+      q('#imName').innerHTML = L(o(nameCol)); q('#imPrice').innerHTML = L(o(priceCol)); q('#imHdr').checked = hdr;
     }
     function calc(){
-      const map = new Map(); let skipped = 0, dup = 0;
+      const map = new Map();
       for(let i=hdr?1:0;i<rows.length;i++){
         const r = rows[i], name = String(r[nameCol]??'').trim(), p = parsePrice(r[priceCol]), k = norm(name);
-        if(!name || !k || p==null || p<=0){ skipped++; continue; }
-        if(map.has(k)) dup++; map.set(k,[name,round2(p)]);
+        if(!name || !k || p==null || p<=0) continue;
+        map.set(k,[name,round2(p)]);
       }
       items = [...map.values()];
     }
     function preview(){
       month = q('#imMonth').value || month; calc();
       const box = q('#imPrev');
-      if(!items.length){ box.innerHTML = '<div class="note warn">No rows with a perfume name and a price were found. Check the two column choices above.</div><button class="btn" disabled>Import</button>'; return; }
+      if(!items.length){ box.innerHTML = L('<div class="note warn">'+t('Није пронађен ниједан ред са називом парфема и ценом. Провери две колоне изнад.')+'</div><button class="btn" disabled>'+t('Увези')+'</button>'); return; }
       const prevList = [...data.lists].filter(l=>l.month<month).pop();
       const skippedTxt = (() => { let sk = 0; for(let i=hdr?1:0;i<rows.length;i++){ const r = rows[i]; const name = String(r[nameCol]??'').trim(), p = parsePrice(r[priceCol]); if(!name||p==null||p<=0) sk++; } return sk; })();
-      let t = '<b>'+items.length.toLocaleString('en-US')+'</b> perfumes found<br>Sample: '+items.slice(0,3).map(x=>esc(x[0])+' → '+fmtPrice(x[1],items.some(y=>y[1]%1!==0))).join('<br>');
-      if(skippedTxt) t += '<br>Skipped rows: '+skippedTxt+' (empty or no valid price)';
+      let txt = t('Пронађено парфема: <b>{a}</b>',{a:fmtNum(items.length,0)})+'<br>'+t('Пример:')+' '+items.slice(0,3).map(x=>esc(x[0])+' → '+fmtPrice(x[1],items.some(y=>y[1]%1!==0))).join('<br>');
+      if(skippedTxt) txt += '<br>'+t('Прескочени редови: {a} (празни или без исправне цене)',{a:skippedTxt});
       if(prevList){
         const c = compareKeyed(pairsOf(prevList), items.map(x=>[norm(x[0]),x[1]]));
-        t += '<br><br>Compared with <b>'+monthLabel(prevList.month)+'</b>: ▲ '+c.up+' · ▼ '+c.down+' · same '+c.same+' · new '+c.new+' · removed '+c.removed+(c.avg!=null?'<br>Average change <b>'+sgnPct(c.avg)+'</b>':'');
-      } else t += '<br><br>This will be your first list, so there are no trends yet.';
+        txt += '<br><br>'+t('Поређено са <b>{a}</b>: ▲ {b} · ▼ {c} · исто {d} · нових {e} · уклоњено {f}',{a:monthLabel(prevList.month),b:c.up,c:c.down,d:c.same,e:c.new,f:c.removed})+(c.avg!=null?'<br>'+t('Просечна промена <b>{a}</b>',{a:sgnPct(c.avg)}):'');
+      } else txt += '<br><br>'+t('Ово ће бити твоја прва листа, па још нема трендова.');
       const exists = data.lists.some(l=>l.month===month);
-      box.innerHTML = '<div class="note">'+t+'</div>'+(exists?'<div class="note warn">A list for '+monthLabel(month)+' already exists. Importing will replace it.</div>':'')+
-        '<button class="btn" id="imGo">'+(exists?'Replace ':'Import ')+monthLabel(month)+'</button>';
+      box.innerHTML = L('<div class="note">'+txt+'</div>'+(exists?'<div class="note warn">'+t('Листа за {a} већ постоји. Увоз ће је заменити.',{a:monthLabel(month)})+'</div>':'')+
+        '<button class="btn" id="imGo">'+t(exists?'Замени {a}':'Увези {a}',{a:monthLabel(month)})+'</button>');
     }
     cols(); preview();
     q('#imMonth').addEventListener('change', preview);
     q('#imName').addEventListener('change', e=>{ nameCol = Number(e.target.value); preview(); });
     q('#imPrice').addEventListener('change', e=>{ priceCol = Number(e.target.value); preview(); });
     q('#imHdr').addEventListener('change', e=>{ hdr = e.target.checked; cols(); preview(); });
-    const sh = q('#imSheet'); if(sh) sh.addEventListener('change', e=>{ sheet = e.target.value; loadRows(); cols(); preview(); });
+    const sh = q('#imSheet'); if(sh) sh.addEventListener('change', e=>{ sheet = src.names[Number(e.target.value)]; loadRows(); cols(); preview(); });
     q('#imPrev').addEventListener('click', e => {
       if(e.target.id!=='imGo') return;
-      if(!/^\d{4}-\d{2}$/.test(month)){ toast('Pick a month'); return; }
+      if(!/^\d{4}-\d{2}$/.test(month)){ toast(t('Изабери месец')); return; }
       data.lists = data.lists.filter(l=>l.month!==month);
       data.lists.push({ id:newId(), month, file:fileName.slice(0,120), at:new Date().toISOString(), items });
       data.lists.sort((a,b)=>a.month<b.month?-1:1);
       ui.month = month; ui.filter = 'all'; ui.limit = 50;
-      buildCache(); persist(); closeSheet(); setTab('prices'); render();
-      toast('Imported '+items.length.toLocaleString('en-US')+' perfumes for '+monthLabel(month,true));
+      buildCache(); const saved = persist(); closeSheet(); setTab('prices'); render();
+      if(!(saved && offerDeleteFile(fileName, items.length, month))) toast(t('Увезено {a} за {b}',{a:P(items.length,'perf'),b:monthLabel(month,true)}));
     });
   });
+}
+// Android app only: the prices are saved in the app, so the Excel/CSV file can go.
+function offerDeleteFile(fileName, count, month){
+  let can = false; try{ can = !!(Native && Native.canDeletePicked && Native.canDeletePicked(fileName)); }catch(e){}
+  if(!can) return false;
+  openSheet('<h2>'+t('Обрисати Excel фајл?')+'</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 6px">'+
+    t('Све цене за {a} ({b}) сада су сачуване у апликацији, па <b style="color:var(--text)">{c}</b> више није потребан. Брисањем се уклања само фајл са телефона. Листа, трендови и бекап остају како јесу.',{a:esc(monthLabel(month)),b:fmtNum(count,0),c:esc(fileName)})+'</p>'+
+    '<button class="btn danger" id="dfYes">'+t('Обриши фајл')+'</button><button class="btn sec" data-a="closeSheet">'+t('Задржи фајл')+'</button>',
+    s => s.querySelector('#dfYes').addEventListener('click', () => {
+      let ok = false; try{ ok = Native.deletePicked(fileName); }catch(e){}
+      closeSheet(); toast(ok ? t('Фајл је обрисан. Листа је сачувана.') : t('Фајл није обрисан. Листа је сачувана.'));
+    }));
+  return true;
 }
 $('listFile').addEventListener('change', async ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
   try{ openImport(f.name, await loadSource(f)); }
   catch(err){
-    toast(err.message==='nolib' ? 'Excel reader didn’t load. Check your connection or use CSV.' : 'Couldn’t read that file. Try .xlsx or CSV.');
+    toast(err.message==='nolib' ? t('Excel читач се није учитао. Пробај CSV.') : t('Фајл није могао да се прочита. Пробај .xlsx или CSV.'));
   }
 });
 
 /* ============ BACKUP ============ */
 function exportData(){
-  const blob = new Blob([JSON.stringify({ currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})) })],{ type:'application/json' });
-  const url = URL.createObjectURL(blob), a = document.createElement('a'), d = new Date();
-  a.href = url; a.download = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); toast('Backup exported');
+  const fred = {}; fredPrices.forEach((v,k)=>{ fred[k]=v; });
+  const json = JSON.stringify({ app:'perfume-prices', version:2, exported:new Date().toISOString(), currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})), fred });
+  const d = new Date(), name = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
+  lastBackup = d.toISOString(); try{ localStorage.setItem(BACKUP_KEY, lastBackup); }catch(e){}
+  // Android app: WebView can't download blob: URLs, so hand the file to the native side.
+  if(Native){ Native.saveFile(name, json); render(); return; }
+  const blob = new Blob([json],{ type:'application/json' });
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); toast(t('Бекап је сачуван')); render();
 }
 $('backupFile').addEventListener('change', ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
   const r = new FileReader();
   r.onload = () => {
-    let d = null; try{ d = normalizeData(JSON.parse(r.result)); }catch(e){}
-    if(!d || !d.lists.length){ toast('That isn’t a valid backup file'); return; }
-    confirmSheet('Replace your lists?','The backup has '+d.lists.length+(d.lists.length===1?' list':' lists')+'. Your current '+data.lists.length+' will be replaced.','Replace with backup',()=>{
-      data = d; ui.month = null; buildCache(); persist(); render(); toast('Backup imported');
+    let raw = null, d = null; try{ raw = JSON.parse(r.result); d = normalizeData(raw); }catch(e){}
+    if(!d || !d.lists.length){ toast(t('Ово није исправан бекап фајл')); return; }
+    // Backups made before version 2 have no Fredrik & Louisa prices; keep the current ones then.
+    const fred = raw.fred && typeof raw.fred==='object' && !Array.isArray(raw.fred)
+      ? new Map(Object.entries(raw.fred).filter(([k,v])=>k && Number.isFinite(Number(v)) && Number(v)>0).map(([k,v])=>[k,Number(v)])) : null;
+    confirmSheet(t('Заменити листе?'), t('Бекап има {a}{b}. Тренутни подаци ({c}) биће замењени.',{a:P(d.lists.length,'list'),b:fred?t(' и Fredrik & Louisa цене ({a})',{a:fred.size}):'',c:P(data.lists.length,'list')}), t('Замени бекапом'), ()=>{
+      data = d; if(fred){ fredPrices = fred; persistFred(); }
+      ui.month = null; buildCache(); persist(); render(); toast(t('Бекап је враћен'));
     });
   };
   r.readAsText(f);
@@ -705,12 +959,13 @@ const actions = {
   viewList: el => { ui.month = el.dataset.v; ui.filter = 'all'; ui.limit = 50; setTab('prices'); render(); },
   delList: el => askDelete(el.dataset.v),
   export: () => exportData(),
-  importBackup: () => $('backupFile').click()
+  importBackup: () => $('backupFile').click(),
+  lang: el => setLang(el.dataset.v)
 };
 document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if(el && actions[el.dataset.a]) actions[el.dataset.a](el); });
 document.addEventListener('change', e => {
   if(e.target.id==='sortSel'){ ui.sort = e.target.value; ui.limit = 50; renderList(); }
-  if(e.target.id==='curInput'){ data.currency = e.target.value.trim().slice(0,8); persist(); renderHead(); renderList(); toast('Currency label saved'); }
+  if(e.target.id==='curInput'){ data.currency = e.target.value.trim().slice(0,8); persist(); renderHead(); renderList(); toast(t('Ознака валуте је сачувана')); }
 });
 let qT;
 $('q').addEventListener('input', e => {
@@ -720,7 +975,13 @@ $('q').addEventListener('input', e => {
 $('qClear').addEventListener('click', () => { const q = $('q'); q.value = ''; $('searchBox').classList.remove('has'); ui.q = ''; ui.limit = 50; renderList(); q.focus(); });
 
 function render(){ buildView(); renderHead(); renderTool(); renderList(); renderLists(); }
+renderChrome();
 render();
+
+// Offline support for the installed web app. The Android app bundles the page itself.
+if('serviceWorker' in navigator && location.hostname !== 'appassets.androidplatform.net' && location.protocol !== 'file:'){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>
