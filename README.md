@@ -6,7 +6,9 @@ Monthly perfume price lists with price trends. Import each month's Excel or CSV 
 * Import `.xlsx`, `.xls`, `.csv` or text lists (perfume + price columns are detected automatically).
 * Month-to-month comparison, search, filters, sparklines and a price chart per perfume.
 * Four languages: Serbian (Cyrillic, default), Serbian (Latin), English and Norwegian. Switch on the Lists tab (*Језик*). The Android app's own dialogs follow the phone's language.
-* Backup and restore in one small JSON file: all months, the currency label and your Fredrik & Louisa prices.
+* Backup and restore in one small JSON file: all months, the currencies and your Fredrik & Louisa prices.
+* Currencies: pick the price list currency (detected from the file when it says EUR, €, RSD…) and the Fredrik & Louisa currency (NOK by default). Prices are shown converted (“= 1.357 kr”) and the difference is worked out in the F&L currency.
+  The exchange rate is downloaded automatically at most twice a day (open.er-api.com, with the jsDelivr currency-api and Frankfurter as fallbacks) or can be entered by hand.
 * Installable as an app (PWA) and works offline after the first visit.
 * Android app (APK) that tells you when a new version is out.
 
@@ -28,7 +30,7 @@ Always the newest version: https://github.com/kosmet-crypto/Cenovnik-Parfema/rel
 2. Open the file. Android will ask to allow installs from your browser or file manager; allow it once.
 3. Install. Newer APKs install over the old one and keep your price lists.
 
-The app checks for a newer release at most twice a day and offers to download it. Updates are not silent: you tap **Download**, then open the file to install.
+The app checks for a newer release at most twice a day and offers to download it. **Check for updates** on the Lists tab checks right away (in the browser version it reloads the page when there is a new one). Updates are not silent: you tap **Download**, then open the file to install.
 
 The APK bundles `index.html` and the Excel reader, so it works offline from the first launch. Its data is stored inside the app,
 separately from the browser version, so use **Export backup** in the browser and **Import backup** in the app (Lists tab) to move your data.
