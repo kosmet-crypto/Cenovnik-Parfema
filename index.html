@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e0d0c">
 <title>Perfume Prices</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Perfume Prices">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-<!-- SheetJS reads .xlsx / .xls files in the browser (CSV and text work without it) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SheetJS 0.18.5 reads .xlsx / .xls files (CSV and text work without it). Bundled so it works offline. -->
+<script src="lib/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0e0d0c; --surface:#171513; --surface2:#211e1a; --line:#2d2924;
@@ -157,6 +162,8 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 .note{background:var(--surface2);border-radius:14px;padding:12px 14px;font-size:.86rem;font-weight:600;color:var(--muted);line-height:1.5;margin-top:12px}
 .note b{color:var(--text)}
 .note.warn{background:var(--up-soft);color:var(--up)}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 0;padding:12px 14px;border-radius:16px;background:var(--gold-soft);border:1px solid var(--line);font-size:.84rem;font-weight:700;line-height:1.45}
+.banner button{flex:none;padding:9px 14px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:800;font-size:.84rem}
 .htab{width:100%;border-collapse:collapse;margin-top:6px;font-size:.9rem}
 .htab td{padding:10px 2px;border-top:1px solid var(--line);font-weight:700}
 .htab td:nth-child(2){text-align:right}.htab td:nth-child(3){text-align:right;font-size:.8rem}
@@ -203,6 +210,9 @@ mark{background:none;color:var(--gold);border-bottom:2px solid var(--gold);font-
 /* ============ helpers ============ */
 const KEY = 'perfumePricesV1';
 const FRED_KEY = 'perfumeFredrikPricesV1';
+const BACKUP_KEY = 'perfumeLastBackupV1';
+// Set inside the Android app (see android/.../MainActivity.java).
+const Native = window.PerfumeAndroid || null;
 const $ = id => document.getElementById(id);
 const collator = new Intl.Collator('en', { sensitivity:'base', numeric:true });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -274,6 +284,7 @@ function loadData(){ try{ const d = normalizeData(JSON.parse(localStorage.getIte
 function loadFredData(){ try{ const d = JSON.parse(localStorage.getItem(FRED_KEY)); if(d && typeof d==='object') return new Map(Object.entries(d)); }catch(e){} return new Map(); }
 let data = loadData();
 let fredPrices = loadFredData();
+let lastBackup = (() => { try{ return localStorage.getItem(BACKUP_KEY) || null; }catch(e){ return null; } })();
 function persistFred(){
   try{
     const obj = {}; fredPrices.forEach((v,k)=>{ obj[k]=v; });
@@ -414,6 +425,7 @@ function renderHead(){
   if(L.length>1){
     h += '<div class="chips months">'+L.slice().reverse().map(l=>'<button class="chip '+(l.month===v.cur.month?'on':'')+'" data-a="month" data-v="'+l.month+'">'+monthLabel(l.month,true)+'</button>').join('')+'</div>';
   }
+  h += backupBanner();
   h += '<section class="hero"><div class="eyebrow">Price list</div><h1 class="month">'+monthLabel(v.cur.month)+'</h1><div class="meta"><b>'+v.rows.length.toLocaleString('en-US')+'</b> perfumes'+
     (v.prev ? ' · compared with <b>'+monthLabel(v.prev.month)+'</b>' : ' · import next month’s list to see price trends')+'</div>'+
     (v.avg!=null ? '<div class="meta">Prices moved <b style="color:var(--'+(v.avg>0?'up':v.avg<0?'down':'muted')+')">'+sgnPct(v.avg)+'</b> on average</div>' : '')+'</section>';
@@ -422,6 +434,12 @@ function renderHead(){
     h += '<div class="chips">'+chip('all','All',v.rows.length,'','')+chip('up','Up',c.up,'up','▲')+chip('down','Down',c.down,'down','▼')+chip('same','Same',c.same,'','')+chip('new','New',c.new,'new','')+chip('removed','Removed',c.removed,'','')+'</div>';
   }
   head.innerHTML = h;
+}
+function backupBanner(){
+  if(!data.lists.length) return '';
+  const last = lastBackup ? new Date(lastBackup).getTime() : 0;
+  if(last && Date.now()-last < 14*864e5) return '';
+  return '<div class="banner"><span>'+(last?'Your last backup is over 2 weeks old.':'Your lists live only on this device.')+' Export a backup to keep them safe.</span><button data-a="export">Export</button></div>';
 }
 function renderTool(){
   if(!view){ $('pTool').innerHTML = ''; return; }
@@ -557,7 +575,9 @@ function renderLists(){
     }
   }
   h += '<div class="card"><h3>Currency label</h3><p>Optional. Shown next to prices, for example RSD or €.</p><input class="field" id="curInput" maxlength="8" placeholder="e.g. RSD" value="'+esc(data.currency)+'" style="margin-top:12px"></div>';
-  h += '<div class="card"><h3>Backup</h3><p>Your lists are stored in this browser only. Export a backup now and then, or to move to another device.</p><button class="btn" data-a="export">Export backup</button><button class="btn sec" data-a="importBackup">Import backup</button></div>';
+  const lb = lastBackup ? new Date(lastBackup).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Never';
+  h += '<div class="card"><h3>Backup</h3><p>Your lists are stored on this device only. A backup is one small file with every month, the currency label and your Fredrik &amp; Louisa prices. You don’t need to keep the Excel files once they are imported.</p>'+
+    '<p style="margin-top:8px">Last export: <b style="color:var(--text)">'+lb+'</b></p><button class="btn" data-a="export">Export backup</button><button class="btn sec" data-a="importBackup">Import backup</button></div>';
   el.innerHTML = h;
 }
 function askDelete(month){
@@ -660,10 +680,22 @@ function openImport(fileName, src){
       data.lists.push({ id:newId(), month, file:fileName.slice(0,120), at:new Date().toISOString(), items });
       data.lists.sort((a,b)=>a.month<b.month?-1:1);
       ui.month = month; ui.filter = 'all'; ui.limit = 50;
-      buildCache(); persist(); closeSheet(); setTab('prices'); render();
-      toast('Imported '+items.length.toLocaleString('en-US')+' perfumes for '+monthLabel(month,true));
+      buildCache(); const saved = persist(); closeSheet(); setTab('prices'); render();
+      if(!(saved && offerDeleteFile(fileName, items.length, month))) toast('Imported '+items.length.toLocaleString('en-US')+' perfumes for '+monthLabel(month,true));
     });
   });
+}
+// Android app only: the prices are saved in the app, so the Excel/CSV file can go.
+function offerDeleteFile(fileName, count, month){
+  let can = false; try{ can = !!(Native && Native.canDeletePicked && Native.canDeletePicked(fileName)); }catch(e){}
+  if(!can) return false;
+  openSheet('<h2>Delete the Excel file?</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 6px">All '+count.toLocaleString('en-US')+' prices for '+esc(monthLabel(month))+' are now saved in the app, so <b style="color:var(--text)">'+esc(fileName)+'</b> is no longer needed. Deleting it removes only the file from your phone. The list, trends and your backup stay as they are.</p>'+
+    '<button class="btn danger" id="dfYes">Delete file</button><button class="btn sec" data-a="closeSheet">Keep file</button>',
+    s => s.querySelector('#dfYes').addEventListener('click', () => {
+      let ok = false; try{ ok = Native.deletePicked(fileName); }catch(e){}
+      closeSheet(); toast(ok ? 'File deleted. Your list is kept.' : 'Couldn’t delete the file. Your list is kept.');
+    }));
+  return true;
 }
 $('listFile').addEventListener('change', async ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
@@ -675,19 +707,29 @@ $('listFile').addEventListener('change', async ev => {
 
 /* ============ BACKUP ============ */
 function exportData(){
-  const blob = new Blob([JSON.stringify({ currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})) })],{ type:'application/json' });
-  const url = URL.createObjectURL(blob), a = document.createElement('a'), d = new Date();
-  a.href = url; a.download = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); toast('Backup exported');
+  const fred = {}; fredPrices.forEach((v,k)=>{ fred[k]=v; });
+  const json = JSON.stringify({ app:'perfume-prices', version:2, exported:new Date().toISOString(), currency:data.currency, lists:data.lists.map(l=>({id:l.id,month:l.month,file:l.file,at:l.at,items:l.items})), fred });
+  const d = new Date(), name = 'perfume-prices-backup-'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.json';
+  lastBackup = d.toISOString(); try{ localStorage.setItem(BACKUP_KEY, lastBackup); }catch(e){}
+  // Android app: WebView can't download blob: URLs, so hand the file to the native side.
+  if(Native){ Native.saveFile(name, json); render(); return; }
+  const blob = new Blob([json],{ type:'application/json' });
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); toast('Backup exported'); render();
 }
 $('backupFile').addEventListener('change', ev => {
   const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
   const r = new FileReader();
   r.onload = () => {
-    let d = null; try{ d = normalizeData(JSON.parse(r.result)); }catch(e){}
+    let raw = null, d = null; try{ raw = JSON.parse(r.result); d = normalizeData(raw); }catch(e){}
     if(!d || !d.lists.length){ toast('That isn’t a valid backup file'); return; }
-    confirmSheet('Replace your lists?','The backup has '+d.lists.length+(d.lists.length===1?' list':' lists')+'. Your current '+data.lists.length+' will be replaced.','Replace with backup',()=>{
-      data = d; ui.month = null; buildCache(); persist(); render(); toast('Backup imported');
+    // Backups made before version 2 have no Fredrik & Louisa prices; keep the current ones then.
+    const fred = raw.fred && typeof raw.fred==='object' && !Array.isArray(raw.fred)
+      ? new Map(Object.entries(raw.fred).filter(([k,v])=>k && Number.isFinite(Number(v)) && Number(v)>0).map(([k,v])=>[k,Number(v)])) : null;
+    confirmSheet('Replace your lists?','The backup has '+d.lists.length+(d.lists.length===1?' list':' lists')+(fred?' and '+fred.size+' Fredrik & Louisa prices':'')+'. Your current '+data.lists.length+' will be replaced.','Replace with backup',()=>{
+      data = d; if(fred){ fredPrices = fred; persistFred(); }
+      ui.month = null; buildCache(); persist(); render(); toast('Backup imported');
     });
   };
   r.readAsText(f);
@@ -721,6 +763,11 @@ $('qClear').addEventListener('click', () => { const q = $('q'); q.value = ''; $(
 
 function render(){ buildView(); renderHead(); renderTool(); renderList(); renderLists(); }
 render();
+
+// Offline support for the installed web app. The Android app bundles the page itself.
+if('serviceWorker' in navigator && location.hostname !== 'appassets.androidplatform.net' && location.protocol !== 'file:'){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

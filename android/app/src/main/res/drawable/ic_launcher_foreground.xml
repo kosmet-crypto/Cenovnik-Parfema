@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gold perfume bottle (cap, neck, body with a highlight), kept inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFE9CC8C"
+        android:pathData="M48.5,26h11a1.5,1.5 0,0 1,1.5 1.5v7a1.5,1.5 0,0 1,-1.5 1.5h-11a1.5,1.5 0,0 1,-1.5 -1.5v-7a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path
+        android:fillColor="#FFB38B45"
+        android:pathData="M50,36h8v5h-8z" />
+    <path android:pathData="M42,41h24a9,9 0,0 1,9 9v23a9,9 0,0 1,-9 9h-24a9,9 0,0 1,-9 -9v-23a9,9 0,0 1,9 -9z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="33" android:startY="41"
+                android:endX="75" android:endY="82">
+                <item android:offset="0" android:color="#FFEACB86" />
+                <item android:offset="1" android:color="#FFB08840" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#59FFFFFF"
+        android:pathData="M41,48h3a1.5,1.5 0,0 1,1.5 1.5v22a1.5,1.5 0,0 1,-1.5 1.5h-3a1.5,1.5 0,0 1,-1.5 -1.5v-22a1.5,1.5 0,0 1,1.5 -1.5z" />
+</vector>
