@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ценовник парфема</string>
+    <string name="update_title">Нова верзија</string>
+    <string name="update_message">Ценовник парфема %1$s је спреман. Преузми га и отвори фајл да ажурираш. Листе остају на месту.</string>
+    <string name="update_download">Преузми</string>
+    <string name="update_later">Касније</string>
+    <string name="no_file_app">Нема апликације за чување фајлова</string>
+    <string name="backup_saved">Бекап је сачуван</string>
+    <string name="backup_failed">Бекап није сачуван</string>
+</resources>

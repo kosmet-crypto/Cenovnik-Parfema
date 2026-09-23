@@ -5,6 +5,7 @@ Monthly perfume price lists with price trends. Import each month's Excel or CSV 
 ## Features
 * Import `.xlsx`, `.xls`, `.csv` or text lists (perfume + price columns are detected automatically).
 * Month-to-month comparison, search, filters, sparklines and a price chart per perfume.
+* Four languages: Serbian (Cyrillic, default), Serbian (Latin), English and Norwegian. Switch on the Lists tab (*Језик*). The Android app's own dialogs follow the phone's language.
 * Backup and restore in one small JSON file: all months, the currency label and your Fredrik & Louisa prices.
 * Installable as an app (PWA) and works offline after the first visit.
 * Android app (APK) that tells you when a new version is out.

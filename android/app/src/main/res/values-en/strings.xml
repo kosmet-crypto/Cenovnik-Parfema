@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Perfume Prices</string>
+    <string name="update_title">Update available</string>
+    <string name="update_message">Perfume Prices %1$s is ready. Download it and open the file to update. Your price lists stay in place.</string>
+    <string name="update_download">Download</string>
+    <string name="update_later">Later</string>
+    <string name="no_file_app">No app available to save files</string>
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_failed">Could not save backup</string>
+</resources>

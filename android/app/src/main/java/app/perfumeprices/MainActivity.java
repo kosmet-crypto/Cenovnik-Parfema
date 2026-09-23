@@ -168,9 +168,9 @@ public class MainActivity extends Activity {
     private void showUpdateDialog(String version) {
         if (isFinishing()) return;
         new AlertDialog.Builder(this)
-                .setTitle("Update available")
-                .setMessage("Perfume Prices " + version + " is ready. Download it and open the file to update. Your price lists stay in place.")
-                .setPositiveButton("Download", (d, w) -> {
+                .setTitle(R.string.update_title)
+                .setMessage(getString(R.string.update_message, version))
+                .setPositiveButton(R.string.update_download, (d, w) -> {
                     Uri apk = Uri.parse("https://github.com/" + BuildConfig.UPDATE_REPO
                             + "/releases/latest/download/perfume-prices.apk");
                     try {
@@ -178,7 +178,7 @@ public class MainActivity extends Activity {
                     } catch (ActivityNotFoundException ignored) {
                     }
                 })
-                .setNegativeButton("Later", null)
+                .setNegativeButton(R.string.update_later, null)
                 .show();
     }
 
@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
                     startActivityForResult(i, REQ_SAVE_FILE);
                 } catch (ActivityNotFoundException e) {
                     pendingSaveText = null;
-                    Toast.makeText(MainActivity.this, "No app available to save files", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.no_file_app, Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -246,9 +246,9 @@ public class MainActivity extends Activity {
             if (uri == null || text == null) return;
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 out.write(text.getBytes(StandardCharsets.UTF_8));
-                Toast.makeText(this, "Backup saved", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.backup_saved, Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
-                Toast.makeText(this, "Could not save backup", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.backup_failed, Toast.LENGTH_LONG).show();
             }
         }
     }

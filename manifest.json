@@ -1,7 +1,7 @@
 {
-  "name": "Perfume Prices",
-  "short_name": "Perfume Prices",
-  "description": "Monthly perfume price lists with price trends, kept privately on your device.",
+  "name": "Ценовник парфема",
+  "short_name": "Ценовник",
+  "description": "Месечни ценовници парфема са кретањем цена, чувају се само на твом уређају.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
