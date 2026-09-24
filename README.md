@@ -5,6 +5,8 @@ Monthly perfume price lists with price trends. Import each month's Excel or CSV 
 ## Features
 * Import `.xlsx`, `.xls`, `.csv` or text lists (perfume + price columns are detected automatically).
 * Month-to-month comparison, search, filters, sparklines and a price chart per perfume.
+* ★ Watch list: star perfumes in the list or in their detail sheet and filter on them. After each import a short report shows what happened to them (up, down, same, gone, new).
+* Name matching across months ignores word order, `100 ml`/`100ml` and `Eau de Parfum`/`EDP`. When a new name looks like one that disappeared (for example the brand is missing), the import preview suggests linking them; ticked pairs are treated as the same perfume.
 * Four languages: Serbian (Cyrillic, default), Serbian (Latin), English and Norwegian. Switch on the Lists tab (*Језик*). The Android app's own dialogs follow the phone's language.
 * Backup and restore in one small JSON file: all months, the currencies and your Fredrik & Louisa prices.
 * Currencies: pick the price list currency (detected from the file when it says EUR, €, RSD…) and the Fredrik & Louisa currency (NOK by default). Prices are shown converted (“= 1.357 kr”) and the difference is worked out in the F&L currency.
@@ -15,6 +17,9 @@ Monthly perfume price lists with price trends. Import each month's Excel or CSV 
 ## Excel files are not kept
 Importing reads the file once and saves only the perfume names and prices. The app never stores the Excel file itself, so you can delete it afterwards.
 In the Android app, right after an import you are asked whether to delete the file from your phone. **Keep file** leaves it; **Delete file** removes only the file. The list, trends and backups are not affected either way.
+
+## Excel reader
+SheetJS is bundled in `lib/`. To update it, put the version in `lib/SHEETJS_VERSION` and push: the *Update Excel reader* workflow downloads it from cdn.sheetjs.com and commits it.
 
 ## Install as an app
 * **Android / Chrome:** open the link, then menu → *Install app* (or *Add to Home screen*).
