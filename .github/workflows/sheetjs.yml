@@ -1,0 +1,34 @@
+name: Update Excel reader (SheetJS)
+
+# SheetJS is no longer published to npm; new versions come from cdn.sheetjs.com.
+# Change lib/SHEETJS_VERSION and push: this downloads that version into lib/ and commits it.
+on:
+  push:
+    paths: ['lib/SHEETJS_VERSION', '.github/workflows/sheetjs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download SheetJS
+        run: |
+          V=$(tr -d ' \n' < lib/SHEETJS_VERSION)
+          curl -fsSL -o lib/xlsx.full.min.js "https://cdn.sheetjs.com/xlsx-$V/package/dist/xlsx.full.min.js"
+          # Sanity check: the file must be the requested version.
+          grep -q "version=\"$V\"\|version:\"$V\"\|\"$V\"" lib/xlsx.full.min.js
+          ls -la lib
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet lib/xlsx.full.min.js; then echo "Already up to date"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/xlsx.full.min.js
+          git commit -m "Update SheetJS to $(tr -d ' \n' < lib/SHEETJS_VERSION)"
+          git push
