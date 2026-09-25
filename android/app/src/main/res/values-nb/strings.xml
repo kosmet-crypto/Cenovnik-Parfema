@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Parfymepriser</string>
     <string name="update_title">Ny versjon</string>
-    <string name="update_message">Versjon %1$s er klar (du har %2$s). Last ned filen og åpne den for å oppdatere. Prislistene dine blir liggende.</string>
+    <string name="update_message">Versjon %1$s er klar (du har %2$s). Installere nå? Prislistene dine blir liggende.</string>
     <string name="update_download">Oppdater nå</string>
     <string name="update_later">Senere</string>
     <string name="no_file_app">Ingen app for å lagre filer</string>

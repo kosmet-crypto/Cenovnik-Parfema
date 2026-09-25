@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Perfume Prices</string>
     <string name="update_title">Update available</string>
-    <string name="update_message">Version %1$s is ready (you have %2$s). Download the file and open it to update. Your price lists stay in place.</string>
+    <string name="update_message">Version %1$s is ready (you have %2$s). Install it now? Your price lists stay in place.</string>
     <string name="update_download">Update now</string>
     <string name="update_later">Later</string>
     <string name="no_file_app">No app available to save files</string>

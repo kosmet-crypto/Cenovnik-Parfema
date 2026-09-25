@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Ценовник парфема</string>
     <string name="update_title">Нова верзија</string>
-    <string name="update_message">Нова верзија %1$s је спремна (сада имаш %2$s). Преузми фајл и отвори га да ажурираш. Листе остају на месту.</string>
+    <string name="update_message">Нова верзија %1$s је спремна (сада имаш %2$s). Инсталирати сада? Листе остају на месту.</string>
     <string name="update_download">Ажурирај сада</string>
     <string name="update_later">Касније</string>
     <string name="no_file_app">Нема апликације за чување фајлова</string>
