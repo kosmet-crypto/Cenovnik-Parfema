@@ -55,9 +55,16 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Ota.prepare(this);
+
+        // Downloaded web content (see Ota) wins over the copy inside the APK.
+        final WebViewAssetLoader.AssetsPathHandler bundled = new WebViewAssetLoader.AssetsPathHandler(this);
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .setDomain(HOST)
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/assets/", path -> {
+                    WebResourceResponse r = Ota.serve(this, path);
+                    return r != null ? r : bundled.handle(path);
+                })
                 .build();
 
         webView = new WebView(this);
@@ -121,7 +128,7 @@ public class MainActivity extends Activity {
 
     /* ---------- update check ---------- */
 
-    private static final long UPDATE_CHECK_INTERVAL = 12 * 60 * 60 * 1000L;
+    private static final long UPDATE_CHECK_INTERVAL = 60 * 60 * 1000L;
 
     /**
      * Looks up the latest GitHub Release (tagged v1.0.<versionCode>) and offers to download it
@@ -136,6 +143,15 @@ public class MainActivity extends Activity {
         if (manual) Toast.makeText(this, R.string.update_checking, Toast.LENGTH_SHORT).show();
 
         new Thread(() -> {
+            // Web content first: new content is downloaded quietly and used from the next launch;
+            // a manual check switches to it right away.
+            try {
+                if (Ota.check(this) && manual) runOnUiThread(() -> {
+                    if (Ota.apply(this)) webView.reload();
+                });
+            } catch (Exception ignored) {
+                // Offline: the content stays as it is.
+            }
             try {
                 URL api = new URL("https://api.github.com/repos/" + BuildConfig.UPDATE_REPO + "/releases/latest");
                 HttpURLConnection c = (HttpURLConnection) api.openConnection();
@@ -155,7 +171,8 @@ public class MainActivity extends Activity {
                 if (dot < 0) throw new Exception("Unexpected tag " + tag);
                 final long latest = Long.parseLong(tag.substring(dot + 1));
                 final String name = tag.startsWith("v") ? tag.substring(1) : tag;
-                if (latest > installedVersionCode()) runOnUiThread(() -> showUpdateDialog(name));
+                // A newer release with the same Android part only has web changes, which Ota brings in.
+                if (latest > installedVersionCode() && !Ota.sameNative(body)) runOnUiThread(() -> showUpdateDialog(name));
                 else if (manual) runOnUiThread(() -> Toast.makeText(this,
                         getString(R.string.update_none, BuildConfig.VERSION_NAME), Toast.LENGTH_LONG).show());
             } catch (Exception e) {
@@ -163,6 +180,13 @@ public class MainActivity extends Activity {
                 if (manual) runOnUiThread(() -> Toast.makeText(this, R.string.update_failed, Toast.LENGTH_LONG).show());
             }
         }).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        SelfUpdate.resume(this);
+        checkForUpdate(false);
     }
 
     private long installedVersionCode() throws Exception {
@@ -175,14 +199,7 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.update_title)
                 .setMessage(getString(R.string.update_message, version, BuildConfig.VERSION_NAME))
-                .setPositiveButton(R.string.update_download, (d, w) -> {
-                    Uri apk = Uri.parse("https://github.com/" + BuildConfig.UPDATE_REPO
-                            + "/releases/latest/download/perfume-prices.apk");
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, apk));
-                    } catch (ActivityNotFoundException ignored) {
-                    }
-                })
+                .setPositiveButton(R.string.update_download, (d, w) -> SelfUpdate.start(this))
                 .setNegativeButton(R.string.update_later, null)
                 .show();
     }
@@ -192,7 +209,7 @@ public class MainActivity extends Activity {
         /** Installed version, shown on the Lists tab. */
         @JavascriptInterface
         public String getVersion() {
-            return BuildConfig.VERSION_NAME;
+            return BuildConfig.VERSION_NAME + Ota.label(MainActivity.this);
         }
 
         /** "Check for updates" button on the Lists tab. */
