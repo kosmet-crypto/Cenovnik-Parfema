@@ -98,8 +98,17 @@ h1,h2,h3,p{margin:0}
 .row:active{background:var(--surface2)}
 .r-main{min-width:0;flex:1}
 .r-name{font-weight:700;font-size:.98rem;line-height:1.3;overflow-wrap:anywhere}
-.star{flex:none;align-self:flex-start;font-size:1.3rem;line-height:1;color:var(--muted);padding:1px 2px 6px 0;margin-right:-4px}
-.star.on{color:var(--gold)}
+:root{--star:#f5b301;--star-soft:rgba(245,179,1,.16)}
+/* Звездица у реду: велика мета за прст; празна је видљиво обојена, пуна жута у кружићу. */
+.star{flex:none;align-self:center;display:grid;place-items:center;width:40px;height:40px;margin:-6px -4px -6px -8px;border-radius:50%;font-size:1.55rem;line-height:1;color:var(--gold);opacity:.75;transition:transform .15s}
+.star.on{color:var(--star);background:var(--star-soft);opacity:1;text-shadow:0 0 10px rgba(245,179,1,.45)}
+.star:active{transform:scale(1.25)}
+.row.watched{box-shadow:inset 3px 0 0 var(--star)}
+/* Дугме у детаљима парфема. */
+.favbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:10px 0 6px;padding:13px;border-radius:15px;font-weight:800;font-size:.95rem;border:2px dashed var(--gold);color:var(--gold);background:var(--gold-soft)}
+.favbtn b{font-size:1.25rem;line-height:1}
+.favbtn.on{border:2px solid var(--down);color:var(--down);background:var(--down-soft)}
+.favbtn.on b{color:var(--star);text-shadow:0 0 10px rgba(245,179,1,.45)}
 .rep{list-style:none;margin:10px 0 0;padding:0}
 .rep li{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-top:1px solid var(--line);font-weight:700;font-size:.9rem}
 .rep li span:last-child{flex:none;text-align:right}
@@ -355,9 +364,10 @@ const TR = {
   'ВАЛУТА ЦЕНОВНИКА': ['PRICE LIST CURRENCY', 'PRISLISTENS VALUTA'],
   'Апликација': ['App', 'App'],
   'Праћени': ['Watched', 'Fulgte'],
-  'Прати': ['Watch', 'Følg'],
-  '★ Пратиш': ['★ Watching', '★ Følger'],
-  '☆ Прати': ['☆ Watch', '☆ Følg'],
+  'Додај у праћене': ['Add to watch list', 'Legg til i fulgte'],
+  'У праћенима ✓ (тапни да уклониш)': ['On your watch list ✓ (tap to remove)', 'I fulgte ✓ (trykk for å fjerne)'],
+  'Додато у праћене ★': ['Added to watch list ★', 'Lagt til i fulgte ★'],
+  'Уклоњено из праћених': ['Removed from watch list', 'Fjernet fra fulgte'],
   'Твоји праћени парфеми': ['Your watched perfumes', 'Dine fulgte parfymer'],
   'Поређено са {a}.': ['Compared with {a}.', 'Sammenlignet med {a}.'],
   '▲ поскупело {a}': ['▲ up {a}', '▲ opp {a}'],
@@ -711,7 +721,10 @@ function closeSheet(){
   r.classList.remove('open'); r.innerHTML=''; document.body.classList.remove('noscroll');
   if(next) next();
 }
-function toggleFav(key){ if(favs.has(key)) favs.delete(key); else favs.add(key); persistFav(); renderHead(); renderList(); }
+function toggleFav(key){
+  const on = !favs.has(key); if(on) favs.add(key); else favs.delete(key);
+  persistFav(); renderHead(); renderList(); toast(on ? t('Додато у праћене ★') : t('Уклоњено из праћених'));
+}
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeSheet(); });
 function confirmSheet(title, text, label, onYes){
   openSheet('<h2>'+esc(title)+'</h2><p style="color:var(--muted);font-weight:600;line-height:1.55;margin:8px 0 18px">'+esc(text)+'</p><button class="btn danger" id="cfYes" style="margin-top:0">'+esc(label)+'</button><button class="btn sec" data-a="closeSheet">'+t('Откажи')+'</button>',
@@ -843,7 +856,7 @@ function renderList(){
     const conv = convHtml(p);
 
     const fav = favs.has(r.key);
-    h += '<button class="row" data-a="open" data-i="'+i+'"><span class="star'+(fav?' on':'')+'" data-a="fav" data-k="'+esc(r.key)+'" role="checkbox" aria-checked="'+fav+'" aria-label="'+t('Прати')+'">'+(fav?'★':'☆')+'</span><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+fredBadge+'</div></div>'+
+    h += '<button class="row'+(fav?' watched':'')+'" data-a="open" data-i="'+i+'"><span class="star'+(fav?' on':'')+'" data-a="fav" data-k="'+esc(r.key)+'" role="checkbox" aria-checked="'+fav+'" aria-label="'+t('Додај у праћене')+'">'+(fav?'★':'☆')+'</span><div class="r-main"><div class="r-name">'+hl(r.name)+'</div><div class="r-sub">'+trendHtml(r,dec)+fredBadge+'</div></div>'+
       '<div class="r-side"><div class="r-price'+(r.price==null?' dim':'')+'">'+priceStr(p,dec)+'</div>'+(conv?'<div class="r-conv">'+conv+'</div>':'')+sparkHtml(r)+'</div></button>';
   });
   h += '</div>';
@@ -904,7 +917,7 @@ function openDetail(r){
   const convD = convHtml(curP);
 
   openSheet('<div class="eyebrow">'+MT(view.cur.month)+'</div><h2>'+esc(name)+'</h2>'+
-    '<button class="btn sec sm" id="favBtn" style="flex:none;margin:4px 0 8px">'+t(favs.has(r.key)?'★ Пратиш':'☆ Прати')+'</button>'+
+    (favs.has(r.key) ? '<button class="favbtn on" id="favBtn"><b>★</b>'+t('У праћенима ✓ (тапни да уклониш)')+'</button>' : '<button class="favbtn" id="favBtn"><b>☆</b>'+t('Додај у праћене')+'</button>')+
     (curP!=null ? '<div class="pbig">'+priceStr(curP,dec)+'</div>'+(convD?'<div class="r-conv" style="font-size:.95rem;margin:-2px 0 8px">'+convD+'</div>':'')+'<div class="r-sub">'+trendHtml(r,dec)+'</div>' : '<div class="note warn">'+t('Нема у листи за {a}. Последња позната цена: <b>{b}</b>.',{a:monthLabel(view.cur.month),b:fmtPrice(r.prev,dec)})+'</div>')+
     '<div style="margin-top:14px;"><label class="lbl" for="fredInput">'+t('ЦЕНА FREDRIK & LOUISA (У {a})',{a:cur.fred})+'</label><div style="display:flex;gap:8px;"><input class="field" id="fredInput" type="number" step="any" placeholder="'+t('нпр. 129.9')+'" value="'+esc(fredVal)+'"><button class="btn sm" id="fredSave" style="margin-top:0">'+t('Сачувај')+'</button></div></div>'+
     compHtml+
