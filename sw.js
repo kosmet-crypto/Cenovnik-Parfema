@@ -1,6 +1,6 @@
 /* Perfume Prices service worker: offline support.
    Bump VERSION when shipping changes to the app shell list below. */
-const VERSION = 'perfume-prices-v3';
+const VERSION = 'perfume-prices-v4';
 const SHELL = [
   './',
   './index.html',
