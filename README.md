@@ -6,6 +6,8 @@ Monthly perfume price lists with price trends. Import each month's Excel or CSV 
 * Import `.xlsx`, `.xls`, `.csv` or text lists (perfume + price columns are detected automatically).
 * Month-to-month comparison, search, filters, sparklines and a price chart per perfume.
 * ★ Watch list: star perfumes in the list or in their detail sheet and filter on them. After each import a short report shows what happened to them (up, down, same, gone, new).
+* 🛒 Buying list: mark perfumes you plan to buy in their detail sheet and filter on them. The list shows the total from the price list (also in the F&L currency) and from your Fredrik & Louisa prices, and the difference.
+* The back gesture closes an open perfume or dialog first, then returns from Lists to Prices, and only then leaves the app.
 * Name matching across months ignores word order, `100 ml`/`100ml` and `Eau de Parfum`/`EDP`. When a new name looks like one that disappeared (for example the brand is missing), the import preview suggests linking them; ticked pairs are treated as the same perfume.
 * Four languages: Serbian (Cyrillic, default), Serbian (Latin), English and Norwegian. Switch on the Lists tab (*Језик*). The Android app's own dialogs follow the phone's language.
 * Backup and restore in one small JSON file: all months, the currencies and your Fredrik & Louisa prices.
